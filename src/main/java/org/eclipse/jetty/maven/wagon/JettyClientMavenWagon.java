@@ -464,7 +464,7 @@ public class JettyClientMavenWagon
                 .onRequestContent((request1, buffer) -> 
                             {
                                 int size = buffer.limit() - buffer.position();
-                                LOGGER.info("PUT#onRequestContent {}", size);
+                                //LOGGER.info("PUT#onRequestContent {}", size);
                                 buffer.flip();
                                 TransferEvent transferEvent = new TransferEvent(this, 
                                                                                 resource,
