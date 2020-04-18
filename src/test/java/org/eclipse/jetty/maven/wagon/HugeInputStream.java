@@ -16,7 +16,7 @@
 //  ========================================================================
 //
 
-package org.apache.maven.wagon.providers.http;
+package org.eclipse.jetty.maven.wagon;
 
 import java.io.IOException;
 import java.io.InputStream;

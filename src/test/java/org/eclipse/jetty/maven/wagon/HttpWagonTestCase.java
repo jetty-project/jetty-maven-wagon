@@ -16,7 +16,7 @@
 //  ========================================================================
 //
 
-package org.apache.maven.wagon.providers.http;
+package org.eclipse.jetty.maven.wagon;
 
 import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.apache.maven.wagon.StreamingWagon;
@@ -100,6 +100,8 @@ public abstract class HttpWagonTestCase
         repositoryDirectory.mkdirs();
 
         server = new Server();
+        server.setDumpAfterStart( true );
+        server.setDumpBeforeStop( true );
 
         addConnectors( server );
         List<Handler> handlers = setupHandlers( server );
@@ -1705,5 +1707,4 @@ public abstract class HttpWagonTestCase
             }
         }
     }
-
 }

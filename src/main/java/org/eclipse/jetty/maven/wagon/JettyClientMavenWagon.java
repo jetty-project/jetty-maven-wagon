@@ -75,9 +75,9 @@ public class JettyClientMavenWagon
     private boolean useCache;
 
     /**
-     * plexus.configuration default=2
+     * plexus.configuration default=0 (means default HttpClient default 64)
      */
-    protected int maxConnections = 10;
+    protected int maxConnections = 256;
 
     /**
      * plexus.configuration default="true"
@@ -133,7 +133,10 @@ public class JettyClientMavenWagon
     {
 
         getHttpClient().setFollowRedirects(this.isFollowRedirect());
-        getHttpClient().setMaxConnectionsPerDestination(this.maxConnections);
+        if (this.maxConnections > 0)
+        {
+            getHttpClient().setMaxConnectionsPerDestination(this.maxConnections);
+        }
 
         if (getHttpClient().isStopped())
         {

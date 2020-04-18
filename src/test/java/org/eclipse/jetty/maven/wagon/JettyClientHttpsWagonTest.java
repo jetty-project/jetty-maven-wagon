@@ -15,11 +15,10 @@
 //  You may elect to redistribute this code under either of these licenses.
 //  ========================================================================
 //
-package org.apache.maven.wagon.providers.http;
+package org.eclipse.jetty.maven.wagon;
 
 import org.apache.maven.wagon.StreamingWagon;
 import org.apache.maven.wagon.repository.Repository;
-import org.eclipse.jetty.maven.wagon.JettyClientMavenWagon;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
