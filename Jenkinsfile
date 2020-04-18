@@ -32,6 +32,15 @@ pipeline {
             }
           }
         }
+        stage( "Build / Test - JDK14" ) {
+          agent { node { label 'linux' } }
+          options { timeout( time: 120, unit: 'MINUTES' ) }
+          steps {
+            container('jetty-build') {
+              mavenBuild( "jdk14", "clean install javadoc:javadoc" )
+            }
+          }
+        }
       }
     }
   }
