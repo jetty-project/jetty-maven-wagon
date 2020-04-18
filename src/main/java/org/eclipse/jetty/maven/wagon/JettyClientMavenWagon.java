@@ -140,14 +140,15 @@ public class JettyClientMavenWagon
 
         if (getHttpClient().isStopped())
         {
-            try
-            {
-                getHttpClient().start();
-            }
-            catch (Exception e)
-            {
-                throw new ConnectionException(e.getMessage(), e);
-            }
+//            try
+//            {
+//                getHttpClient().start();
+//            }
+//            catch (Exception e)
+//            {
+//                throw new ConnectionException(e.getMessage(), e);
+//            }
+            HTTP_CLIENT = createHttpClient();
         }
 
         ProxyInfo proxyInfo = getProxyInfo("http", getRepository().getHost());
