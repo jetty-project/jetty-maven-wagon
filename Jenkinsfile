@@ -1,7 +1,7 @@
 #!groovy
 
 pipeline {
-  agent { node { label 'linux' } }
+  agent any
   options {
     durabilityHint('PERFORMANCE_OPTIMIZED')
     buildDiscarder(logRotator(numToKeepStr: '7', artifactNumToKeepStr: '2'))
