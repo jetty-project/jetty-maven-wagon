@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.GZIPInputStream;
 
@@ -607,7 +608,7 @@ public class JettyClientMavenWagon
     {
         Request request = getHttpClient().newRequest(uri).followRedirects(this.followRedirect);
         _httpHeaders.forEach(request::header);
-        return request;
+        return request.timeout( getTimeout(), TimeUnit.MILLISECONDS );
     }
     
     protected void mkdirs(String dirname)
