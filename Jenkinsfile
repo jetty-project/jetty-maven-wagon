@@ -10,12 +10,12 @@ pipeline {
   stages {
     stage( "Parallel Stage" ) {
       parallel {
-        stage( "Build / Test - JDK8" ) {
+        stage( "Build / Test - JDK11" ) {
           agent { node { label 'linux' } }
           options { timeout( time: 120, unit: 'MINUTES' ) }
           steps {
             container('jetty-build') {
-              mavenBuild( "jdk8", "clean install javadoc:javadoc" )
+              mavenBuild( "jdk11", "clean install javadoc:javadoc" )
               // Collect up the jacoco execution results
               jacoco inclusionPattern: '**/org/eclipse/jetty/**/*.class',
                      exclusionPattern: '',
@@ -26,18 +26,9 @@ pipeline {
               script {
                 if ( env.BRANCH_NAME == 'master' )
                 {
-                  mavenBuild( "jdk8", "deploy" )
+                  mavenBuild( "jdk11", "deploy" )
                 }
               }
-            }
-          }
-        }
-        stage( "Build / Test - JDK11" ) {
-          agent { node { label 'linux' } }
-          options { timeout( time: 120, unit: 'MINUTES' ) }
-          steps {
-            container('jetty-build') {
-              mavenBuild( "jdk11", "clean install" )
             }
           }
         }
