@@ -34,18 +34,18 @@ public class JettyClientHttpsWagonTest
     }
 
     @Override
-    protected void setHttpHeaders( StreamingWagon wagon, Properties properties )
+    protected void setHttpHeaders(StreamingWagon wagon, Properties properties)
     {
-        ( (JettyClientMavenWagon) wagon ).setHttpHeaders( properties );
+        ((JettyClientMavenWagon) wagon).setHttpHeaders(properties);
     }
 
     public void testClientAuthenticationWithCertificates()
         throws Exception
     {
-        logger.info( "Running test: " + getName() );
+        logger.info("Running test: " + getName());
 
-        _handlers = Arrays.asList( new StatusHandler( 200 ) );
-        connectors.add( newHttpsConnector( true ) );
+        _handlers = Arrays.asList(new StatusHandler(200));
+        connectors.add(newHttpsConnector(true));
 
         setupRepositories();
 
@@ -55,20 +55,20 @@ public class JettyClientHttpsWagonTest
 
         try
         {
-            System.setProperty( "javax.net.ssl.keyStore", getTestFile( "src/test/resources/ssl/client-store" ).getAbsolutePath() );
-            System.setProperty( "javax.net.ssl.keyStorePassword", "client-pwd" );
-            System.setProperty( "javax.net.ssl.keyStoreType", "jks" );
-            System.setProperty( "javax.net.ssl.trustStore", getTestFile( "src/test/resources/ssl/keystore" ).getAbsolutePath() );
-            System.setProperty( "javax.net.ssl.trustStorePassword", "storepwd" );
-            System.setProperty( "javax.net.ssl.trustStoreType", "jks" );
+            System.setProperty("javax.net.ssl.keyStore", getTestFile("src/test/resources/ssl/client-store").getAbsolutePath());
+            System.setProperty("javax.net.ssl.keyStorePassword", "client-pwd");
+            System.setProperty("javax.net.ssl.keyStoreType", "jks");
+            System.setProperty("javax.net.ssl.trustStore", getTestFile("src/test/resources/ssl/keystore").getAbsolutePath());
+            System.setProperty("javax.net.ssl.trustStorePassword", "storepwd");
+            System.setProperty("javax.net.ssl.trustStoreType", "jks");
 
             StreamingWagon wagon = (StreamingWagon) getWagon();
 
-            wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
+            wagon.connect(new Repository("id", getTestRepositoryUrl()));
 
             try
             {
-                wagon.getToStream( "/base.txt", new ByteArrayOutputStream() );
+                wagon.getToStream("/base.txt", new ByteArrayOutputStream());
             }
             finally
             {
@@ -81,7 +81,7 @@ public class JettyClientHttpsWagonTest
         }
         finally
         {
-            System.setProperties( props );
+            System.setProperties(props);
         }
     }
 

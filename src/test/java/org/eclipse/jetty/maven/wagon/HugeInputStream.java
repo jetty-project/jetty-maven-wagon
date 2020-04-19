@@ -29,7 +29,7 @@ class HugeInputStream
 
     private long read;
 
-    public HugeInputStream( long size )
+    public HugeInputStream(long size)
     {
         this.size = size;
     }
@@ -43,7 +43,7 @@ class HugeInputStream
     public int read()
         throws IOException
     {
-        if ( read >= size )
+        if (read >= size)
         {
             return -1;
         }
@@ -52,15 +52,15 @@ class HugeInputStream
     }
 
     @Override
-    public int read( byte[] b, int off, int len )
+    public int read(byte[] b, int off, int len)
         throws IOException
     {
-        if ( read >= size )
+        if (read >= size)
         {
             return -1;
         }
 
-        int avail = (int) Math.min( len, size - read );
+        int avail = (int) Math.min(len, size - read);
 
         read += avail;
 

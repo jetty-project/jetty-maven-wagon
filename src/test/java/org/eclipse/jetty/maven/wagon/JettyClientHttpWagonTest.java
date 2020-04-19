@@ -44,38 +44,38 @@ public class JettyClientHttpWagonTest
     }
 
     @Override
-    protected void setHttpHeaders( StreamingWagon wagon, Properties properties )
+    protected void setHttpHeaders(StreamingWagon wagon, Properties properties)
     {
-        ( (JettyClientMavenWagon) wagon ).setHttpHeaders( properties );
+        ((JettyClientMavenWagon) wagon).setHttpHeaders(properties);
     }
 
     public void testGetRedirectFromHttpToHttps()
         throws Exception
     {
 
-        logger.info( "Running test: " + getName() );
+        logger.info("Running test: " + getName());
 
         SslRedirectHandler handler = new SslRedirectHandler();
-        _handlers.add( handler );
-        connectors.addAll( Arrays.asList( newHttpsConnector(), newHttpConnector() ) );
+        _handlers.add(handler);
+        connectors.addAll(Arrays.asList(newHttpsConnector(), newHttpConnector()));
 
         setupRepositories();
 
         setupWagonTestingFixtures();
 
-        handler.httpsPort = ( ( ServerConnector)server.getConnectors()[0]).getLocalPort();
+        handler.httpsPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
 
-        wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
+        wagon.connect(new Repository("id", getTestRepositoryUrl()));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try
         {
-            wagon.getToStream( "/base.txt", out );
+            wagon.getToStream("/base.txt", out);
 
-            assertEquals( "PASSED", out.toString( "UTF-8" ) );
-            assertEquals( 1, handler.redirects );
+            assertEquals("PASSED", out.toString("UTF-8"));
+            assertEquals(1, handler.redirects);
         }
         finally
         {
@@ -96,30 +96,30 @@ public class JettyClientHttpWagonTest
         int redirects;
 
         @Override
-        public void handle( String s, Request request, HttpServletRequest httpServletRequest,
-                            HttpServletResponse httpServletResponse )
+        public void handle(String s, Request request, HttpServletRequest httpServletRequest,
+                            HttpServletResponse httpServletResponse)
             throws IOException, ServletException
         {
-            if ( request.isHandled() )
+            if (request.isHandled())
             {
                 return;
             }
 
-            if ( request.getServerPort() != httpsPort )
+            if (request.getServerPort() != httpsPort)
             {
                 String url = "https://" + request.getServerName() + ":" + httpsPort + request.getRequestURI();
 
-                httpServletResponse.setStatus( HttpServletResponse.SC_MOVED_PERMANENTLY );
-                httpServletResponse.setHeader( "Location", url );
+                httpServletResponse.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
+                httpServletResponse.setHeader("Location", url);
 
                 redirects++;
             }
             else
             {
-                httpServletResponse.getWriter().write( "PASSED" );
+                httpServletResponse.getWriter().write("PASSED");
             }
 
-            request.setHandled( true );
+            request.setHandled(true);
         }
     }
 
