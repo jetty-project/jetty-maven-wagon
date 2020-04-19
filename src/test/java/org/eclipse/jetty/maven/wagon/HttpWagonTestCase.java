@@ -28,7 +28,6 @@ import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.resource.Resource;
-import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
@@ -59,21 +58,22 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
-import java.util.stream.StreamSupport;
-import java.util.zip.GZIPOutputStream;
 
 public abstract class HttpWagonTestCase
     extends StreamingWagonTestCase
@@ -97,7 +97,14 @@ public abstract class HttpWagonTestCase
         tearDownWagonTestingFixtures();
 
         File repositoryDirectory = getRepositoryDirectory();
-        FileUtils.deleteDirectory( repositoryDirectory );
+        //FileUtils.deleteDirectory( repositoryDirectory );
+        if(Files.exists( repositoryDirectory.toPath()))
+        {
+            Files.walk(repositoryDirectory.toPath())
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .forEach(File::delete);
+        }
         repositoryDirectory.mkdirs();
 
         server = new Server();
@@ -183,11 +190,11 @@ public abstract class HttpWagonTestCase
         return connector;
     }
 
-    protected List<Handler> setupHandlers( final Server server )
+    protected List<Handler> setupHandlers( Server server )
     {
         List<Handler> handlers = new ArrayList<>();
-        handlers.add( new PutHandler( getRepositoryPath() ) );
         handlers.addAll( _handlers );
+        handlers.add( new PutHandler( getRepositoryPath() ) );
         return handlers;
     }
 
@@ -349,7 +356,7 @@ public abstract class HttpWagonTestCase
         }
     }
 
-    private void runTestGet( final int status )
+    private void runTestGet( int status )
         throws Exception
     {
         logger.info( "Running test: " + getName() );
@@ -422,7 +429,7 @@ public abstract class HttpWagonTestCase
         }
     }
 
-    private boolean runTestResourceExists( final int status )
+    private boolean runTestResourceExists( int status )
         throws Exception
     {
         logger.info( "Running test: " + getName() );
@@ -454,7 +461,7 @@ public abstract class HttpWagonTestCase
     }
 
     @Override
-    protected long getExpectedLastModifiedOnGet( final Repository repository, final Resource resource )
+    protected long getExpectedLastModifiedOnGet( Repository repository, Resource resource )
     {
         File file = new File( getRepositoryPath(), resource.getName() );
         return ( file.lastModified() / 1000 ) * 1000;
@@ -526,7 +533,7 @@ public abstract class HttpWagonTestCase
         }
     }
 
-    private void runTestProxiedRequest( final ProxyInfo proxyInfo, final TestHeaderHandler handler )
+    private void runTestProxiedRequest( ProxyInfo proxyInfo, TestHeaderHandler handler )
         throws Exception
     {
         logger.info( "Running test: " + getName() );
@@ -544,7 +551,7 @@ public abstract class HttpWagonTestCase
         srcFile.deleteOnExit();
 
         String resName = "proxy-res.txt";
-        FileUtils.fileWrite( srcFile.getAbsolutePath() + "/" + resName, "test proxy" );
+        Files.write( Paths.get(srcFile.getAbsolutePath(), resName), "test proxy".getBytes());
 
         File destFile = new File( getOutputPath(), getName() + ".txt" );
         destFile.deleteOnExit();
@@ -622,7 +629,7 @@ public abstract class HttpWagonTestCase
         runTestSecuredGet( authInfo );
     }
 
-    public void runTestSecuredGet( final AuthenticationInfo authInfo )
+    public void runTestSecuredGet( AuthenticationInfo authInfo )
         throws Exception
     {
         logger.info( "Running test: " + getName() );
@@ -638,14 +645,13 @@ public abstract class HttpWagonTestCase
         srcFile.deleteOnExit();
 
         String resName = "secured-res.txt";
-        FileUtils.fileWrite( srcFile.getAbsolutePath() + "/" + resName, "top secret" );
+        Files.write(Paths.get( srcFile.getAbsolutePath(), resName), "top secret".getBytes());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ), authInfo );
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream( "secured/" + resName, out );
 
@@ -712,7 +718,7 @@ public abstract class HttpWagonTestCase
         runTestSecuredResourceExists( authInfo );
     }
 
-    public void runTestSecuredResourceExists( final AuthenticationInfo authInfo )
+    public void runTestSecuredResourceExists( AuthenticationInfo authInfo )
         throws Exception
     {
         logger.info( "Running test: " + getName() );
@@ -729,7 +735,7 @@ public abstract class HttpWagonTestCase
         srcFile.deleteOnExit();
 
         String resName = "secured-res.txt";
-        FileUtils.fileWrite( srcFile.getAbsolutePath() + "/" + resName, "top secret" );
+        Files.write( Paths.get( srcFile.getAbsolutePath(), resName), "top secret".getBytes());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
 
@@ -793,12 +799,12 @@ public abstract class HttpWagonTestCase
         }
     }
 
-    private void runTestPutFailure( final int status )
+    private void runTestPutFailure( int status )
         throws Exception
     {
         logger.info( "Running test: " + getName() );
 
-        StatusHandler handler = new StatusHandler();
+        StatusHandler handler = new StatusHandler(status);
         handler.setStatusToReturn( status );
         _handlers = Arrays.asList( handler );
 
@@ -808,7 +814,7 @@ public abstract class HttpWagonTestCase
 
         String resName = "put-res.txt";
         File srcFile = new File( getOutputPath(), resName );
-        FileUtils.fileWrite( srcFile.getAbsolutePath(), "test put" );
+        Files.write(Paths.get(srcFile.getAbsolutePath()), "test put".getBytes());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
 
@@ -871,7 +877,7 @@ public abstract class HttpWagonTestCase
         runTestSecuredPut( authInfo );
     }
 
-    public void runTestSecuredPut( final AuthenticationInfo authInfo )
+    public void runTestSecuredPut( AuthenticationInfo authInfo )
         throws Exception
     {
         logger.info( "Running test: " + getName() );
@@ -887,7 +893,7 @@ public abstract class HttpWagonTestCase
 
         String resName = "secured-put-res.txt";
         File srcFile = new File( getOutputPath(), resName );
-        FileUtils.fileWrite( srcFile.getAbsolutePath(), "UTF-8", "put top secret" );
+        Files.write(Paths.get(srcFile.getAbsolutePath()), "put top secret".getBytes("UTF-8") );
 
         File dstFile = new File( getRepositoryPath() + "/secured", resName );
         dstFile.mkdirs();
@@ -905,7 +911,8 @@ public abstract class HttpWagonTestCase
         {
             wagon.put( srcFile, "secured/" + resName );
 
-            assertEquals( "put top secret", FileUtils.fileRead( dstFile.getAbsolutePath(), "UTF-8" ) );
+            assertEquals( "put top secret",
+                          Files.readAllLines( Paths.get(dstFile.getAbsolutePath()), Charset.forName( "UTF-8" ) ).get( 0 ));
 
             assertEquals( "8b4f978eeec389ebed2c8b0acd8e107efff29be5", checksumObserver.getActualChecksum() );
         }
@@ -935,7 +942,7 @@ public abstract class HttpWagonTestCase
 
         String resName = "put-res.txt";
         File srcFile = new File( getOutputPath(), resName );
-        FileUtils.fileWrite( srcFile.getAbsolutePath(), "test put" );
+        Files.write(Paths.get(srcFile.getAbsolutePath()), "test put".getBytes());
 
         File dstFile = new File( getRepositoryPath() + "/put", resName );
         dstFile.mkdirs();
@@ -950,7 +957,7 @@ public abstract class HttpWagonTestCase
         {
             wagon.put( srcFile, "put/" + resName );
 
-            assertEquals( "test put", FileUtils.fileRead( dstFile.getAbsolutePath() ) );
+            assertEquals("test put", Files.readAllLines( Paths.get(dstFile.getAbsolutePath())).get(0));
         }
         finally
         {
@@ -960,7 +967,7 @@ public abstract class HttpWagonTestCase
 
             stopTestServer();
 
-            srcFile.delete();
+            Files.deleteIfExists(srcFile.toPath());
         }
     }
 
@@ -983,9 +990,10 @@ public abstract class HttpWagonTestCase
 
         File hugeFile = File.createTempFile( "wagon-test-" + getName(), ".tmp" );
         hugeFile.deleteOnExit();
-        FileOutputStream fos = new FileOutputStream( hugeFile );
-        IOUtil.copy( new HugeInputStream( bytes ), fos );
-        fos.close();
+        try(OutputStream fos = Files.newOutputStream(hugeFile.toPath()))
+        {
+            IOUtil.copy(new HugeInputStream( bytes ), fos );
+        }
         assertEquals( bytes, hugeFile.length() );
 
         try
@@ -1059,7 +1067,7 @@ public abstract class HttpWagonTestCase
 
         String resName = "put-res.txt";
         File srcFile = new File( getOutputPath(), resName );
-        FileUtils.fileWrite( srcFile.getAbsolutePath(), "test put" );
+        Files.write(Paths.get(srcFile.getAbsolutePath()), "test put".getBytes());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
         wagon.setTimeout( 5000 );
@@ -1098,8 +1106,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try
+        try(ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream())
         {
             wagon.getToStream( "large.txt", byteArrayOutputStream );
             assertEquals(10240, byteArrayOutputStream.toString().length() );
@@ -1132,8 +1139,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try
+        try(ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream( "large.txt", out );
 
@@ -1200,8 +1206,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream( currUrl, out );
 
@@ -1245,8 +1250,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream( currUrl, out );
             fail();
@@ -1277,14 +1281,11 @@ public abstract class HttpWagonTestCase
 
         setupRepositories();
 
-        final StreamingWagon wagon = (StreamingWagon) getWagon();
+        StreamingWagon wagon = (StreamingWagon) getWagon();
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        new Thread( new Runnable()
-        {
-
-            public void run()
+        new Thread( () ->
             {
                 try
                 {
@@ -1297,8 +1298,7 @@ public abstract class HttpWagonTestCase
                     e.printStackTrace();
                 }
             }
-
-        }, "wagon-killer" ).start();
+            , "wagon-killer" ).start();
 
         try
         {
@@ -1333,7 +1333,7 @@ public abstract class HttpWagonTestCase
             this.status = status;
         }
 
-        public void setStatusToReturn( final int status )
+        public void setStatusToReturn( int status )
         {
             this.status = status;
         }
@@ -1354,9 +1354,9 @@ public abstract class HttpWagonTestCase
     static class PutHandler
         extends AbstractHandler
     {
-        private final String resourcePath;
+        private String resourcePath;
 
-        public PutHandler( final String repositoryPath )
+        public PutHandler( String repositoryPath )
         {
             this.resourcePath = repositoryPath;
         }
@@ -1379,16 +1379,11 @@ public abstract class HttpWagonTestCase
 
             File file = new File( resourcePath, URLDecoder.decode( request.getPathInfo() ) );
             file.getParentFile().mkdirs();
-            FileOutputStream out = new FileOutputStream( file );
-            ServletInputStream in = request.getInputStream();
-            try
+
+            try(OutputStream out = Files.newOutputStream(file.toPath());
+                ServletInputStream in = request.getInputStream())
             {
                 IOUtil.copy( in, out );
-            }
-            finally
-            {
-                in.close();
-                out.close();
             }
 
             httpServletResponse.setStatus( HttpServletResponse.SC_CREATED );
@@ -1436,7 +1431,7 @@ public abstract class HttpWagonTestCase
                 httpServletResponse.setStatus( 407 );
                 httpServletResponse.addHeader( "Proxy-Authenticate", "Basic realm=\"Squid proxy-caching web server\"" );
 
-                ( (Request) request ).setHandled( true );
+                request.setHandled( true );
                 return;
             }
             super.handle( s, request, httpServletRequest, httpServletResponse );
@@ -1547,19 +1542,19 @@ public abstract class HttpWagonTestCase
     private static class RedirectHandler
         extends AbstractHandler
     {
-        private final String origUrl;
+        private String origUrl;
 
-        private final int code;
+        private int code;
 
-        private final int maxRedirects;
+        private int maxRedirects;
 
         private int redirectCount = 0;
 
-        private final String currUrl;
+        private String currUrl;
 
-        private final boolean relativeLocation;
+        private boolean relativeLocation;
 
-        public RedirectHandler( final int code, final String currUrl, final String origUrl, final int maxRedirects,
+        public RedirectHandler( int code, String currUrl, String origUrl, int maxRedirects,
                                 boolean relativeLocation )
         {
             this.code = code;
@@ -1601,7 +1596,7 @@ public abstract class HttpWagonTestCase
 
                 httpServletResponse.setStatus( code );
                 httpServletResponse.setHeader( "Location", location );
-                ( (Request) request ).setHandled( true );
+                request.setHandled( true );
             }
             else if ( request.getRequestURI().equals( origUrl ) )
             {
@@ -1642,10 +1637,10 @@ public abstract class HttpWagonTestCase
         {
             if ( "GET".equals( request.getMethod() ) )
             {
-                OutputStream os = httpServletResponse.getOutputStream();
-
-                IOUtil.copy( new HugeInputStream( size ), os );
-                os.close();
+                try (OutputStream os = httpServletResponse.getOutputStream())
+                {
+                    IOUtil.copy( new HugeInputStream( size ), os );
+                }
 
                 httpServletResponse.setStatus( 200 );
                 request.setHandled( true );
