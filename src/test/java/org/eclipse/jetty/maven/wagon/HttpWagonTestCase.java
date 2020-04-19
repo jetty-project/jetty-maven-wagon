@@ -105,7 +105,7 @@ public abstract class HttpWagonTestCase
         tearDownWagonTestingFixtures();
 
         File repositoryDirectory = getRepositoryDirectory();
-        //FileUtils.deleteDirectory(repositoryDirectory);
+
         if(Files.exists(repositoryDirectory.toPath()))
         {
             Files.walk(repositoryDirectory.toPath())
@@ -639,7 +639,6 @@ public abstract class HttpWagonTestCase
     public void runTestSecuredGet(AuthenticationInfo authInfo)
         throws Exception
     {
-        
 
         _handlers = Arrays.asList(createSecuredContext());
 
@@ -674,16 +673,17 @@ public abstract class HttpWagonTestCase
         }
     }
 
-    public ServletContextHandler createSecuredContext()
+    public Handler createSecuredContext()
     {
+        HandlerList list = new HandlerList();
+        list.addHandler(new AuthorizingSecurityHandler());
         ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
         root.setContextPath("/");
-        root.setHandler(new AuthorizingSecurityHandler());
         root.setResourceBase(getRepositoryPath());
         ServletHolder servletHolder = new ServletHolder(new DefaultServlet());
         root.addServlet(servletHolder, "/*");
-
-        return root;
+        list.addHandler(root);
+        return list;
     }
 
     public void testSecuredResourceExistsUnauthorized()
@@ -728,9 +728,8 @@ public abstract class HttpWagonTestCase
     public void runTestSecuredResourceExists(AuthenticationInfo authInfo)
         throws Exception
     {
-        
 
-        ServletContextHandler context = createSecuredContext();
+        Handler context = createSecuredContext();
         _handlers = Arrays.asList(context);
 
         setupWagonTestingFixtures();
