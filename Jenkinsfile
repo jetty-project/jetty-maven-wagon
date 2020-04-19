@@ -37,7 +37,7 @@ pipeline {
           options { timeout( time: 120, unit: 'MINUTES' ) }
           steps {
             container('jetty-build') {
-              mavenBuild( "jdk11", "clean install javadoc:javadoc" )
+              mavenBuild( "jdk11", "clean install" )
             }
           }
         }
@@ -46,7 +46,7 @@ pipeline {
           options { timeout( time: 120, unit: 'MINUTES' ) }
           steps {
             container('jetty-build') {
-              mavenBuild( "jdk14", "clean install javadoc:javadoc" )
+              mavenBuild( "jdk14", "clean install" )
             }
           }
         }
