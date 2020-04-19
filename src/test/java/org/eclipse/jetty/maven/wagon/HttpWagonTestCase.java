@@ -82,12 +82,8 @@ public abstract class HttpWagonTestCase
     Logger logger = LoggerFactory.getLogger(getClass());
 
     protected Server server;
-
     protected List<Connector> connectors = new ArrayList<>();
-
     protected List<Handler> _handlers = new ArrayList<>();
-
-    protected List<ContextHandler> _contextHandlers = new ArrayList<>();
 
     @Override
     protected void setUp()
@@ -105,7 +101,6 @@ public abstract class HttpWagonTestCase
         tearDownWagonTestingFixtures();
 
         File repositoryDirectory = getRepositoryDirectory();
-
         if(Files.exists(repositoryDirectory.toPath()))
         {
             Files.walk(repositoryDirectory.toPath())
@@ -115,13 +110,12 @@ public abstract class HttpWagonTestCase
         }
         repositoryDirectory.mkdirs();
 
-
 //        server.setDumpAfterStart(true);
 //        server.setDumpBeforeStop(true);
 
         addConnectors(server);
         List<Handler> handlers = setupHandlers(server);
-        addContexts(server, handlers);
+        server.setHandler( new HandlerList(handlers.toArray(new Handler[handlers.size()])) );
 
         server.start();
     }
@@ -202,35 +196,15 @@ public abstract class HttpWagonTestCase
         List<Handler> handlers = new ArrayList<>();
         handlers.addAll(_handlers);
         handlers.add(new PutHandler(getRepositoryPath()));
+
+        ServletContextHandler root = new ServletContextHandler(null, "/", ServletContextHandler.SESSIONS);
+        root.setResourceBase(getRepositoryPath());
+        ServletHolder servletHolder = new ServletHolder(new DefaultServlet());
+        servletHolder.setInitParameter("gzip", "true");
+        root.addServlet(servletHolder, "/*");
+        handlers.add( root );
+
         return handlers;
-    }
-
-    protected void addContexts(Server server, List<Handler> handlers)
-        throws IOException
-    {
-        if (_contextHandlers == null || _contextHandlers.isEmpty())
-        {
-
-            ServletContextHandler root = new ServletContextHandler(null, "/", ServletContextHandler.SESSIONS);
-            root.setResourceBase(getRepositoryPath());
-            ServletHolder servletHolder = new ServletHolder(new DefaultServlet());
-            servletHolder.setInitParameter("gzip", "true");
-            root.addServlet(servletHolder, "/*");
-            List<Handler> handlerList = new ArrayList<>();
-            handlerList.addAll(handlers);
-            handlerList.add(root);
-            HandlerList contexts = new HandlerList(new HandlerList(handlerList.toArray(new Handler[handlerList.size()])));
-
-            server.setHandler(contexts);
-
-        }
-        else
-        {
-            handlers.addAll(_contextHandlers);
-            server.setHandler(new HandlerList(handlers.toArray(new Handler[handlers.size()])));
-        }
-
-
     }
 
     @Override
