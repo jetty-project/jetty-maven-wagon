@@ -42,7 +42,7 @@ public class JettyClientHttpsWagonTest
     public void testClientAuthenticationWithCertificates()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         _handlers = Arrays.asList( new StatusHandler( 200 ) );
         connectors.add( newHttpsConnector( true ) );

@@ -53,7 +53,7 @@ public class JettyClientHttpWagonTest
         throws Exception
     {
 
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         SslRedirectHandler handler = new SslRedirectHandler();
         _handlers.add( handler );

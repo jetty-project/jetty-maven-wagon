@@ -117,6 +117,7 @@ public class JettyClientMavenWagon
     protected void closeConnection()
         throws ConnectionException
     {
+        LOGGER.debug("closeConnection");
         try
         {
             getHttpClient().stop();
@@ -295,7 +296,6 @@ public class JettyClientMavenWagon
         try
         {
             ContentResponse contentResponse;
-
                 contentResponse = request
                     .onResponseContent((response, buffer) ->
                                        {
@@ -358,9 +358,7 @@ public class JettyClientMavenWagon
             if (timestamp == 0 || timestamp < resource.getLastModified())
             {
                 retValue = true;
-
                 InputStream input = getResponseContentSource(contentResponse);
-
                 if (stream != null)
                 {
                     fireGetStarted(resource, destination);
@@ -608,7 +606,7 @@ public class JettyClientMavenWagon
     {
         Request request = getHttpClient().newRequest(uri).followRedirects(this.followRedirect);
         _httpHeaders.forEach(request::header);
-        return request.timeout( getTimeout(), TimeUnit.MILLISECONDS );
+        return request.timeout(getTimeout(), TimeUnit.MILLISECONDS);
     }
     
     protected void mkdirs(String dirname)

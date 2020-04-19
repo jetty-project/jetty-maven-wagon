@@ -30,7 +30,6 @@ import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.resource.Resource;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
-import org.codehaus.plexus.util.StringOutputStream;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.HashLoginService;
@@ -64,6 +63,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLDecoder;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -72,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.stream.StreamSupport;
 import java.util.zip.GZIPOutputStream;
 
 public abstract class HttpWagonTestCase
@@ -100,8 +101,9 @@ public abstract class HttpWagonTestCase
         repositoryDirectory.mkdirs();
 
         server = new Server();
-        server.setDumpAfterStart( true );
-        server.setDumpBeforeStop( true );
+
+//        server.setDumpAfterStart( true );
+//        server.setDumpBeforeStop( true );
 
         addConnectors( server );
         List<Handler> handlers = setupHandlers( server );
@@ -275,12 +277,12 @@ public abstract class HttpWagonTestCase
     public void testHttpHeaders()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         Properties properties = new Properties();
         properties.setProperty( "User-Agent", "Maven-Wagon/1.0" );
 
-        StreamingWagon wagon = (StreamingWagon) getWagon();
+        JettyClientMavenWagon wagon = (JettyClientMavenWagon) getWagon();
         setHttpHeaders( wagon, properties );
 
         TestHeaderHandler handler = new TestHeaderHandler();
@@ -292,7 +294,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        wagon.getToStream( "resource", new StringOutputStream() );
+        wagon.getToStream( "resource", new ByteArrayOutputStream() );
 
         wagon.disconnect();
 
@@ -350,7 +352,7 @@ public abstract class HttpWagonTestCase
     private void runTestGet( final int status )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
 
@@ -366,7 +368,7 @@ public abstract class HttpWagonTestCase
 
         try
         {
-            wagon.getToStream( "resource", new StringOutputStream() );
+            wagon.getToStream( "resource", new ByteArrayOutputStream() );
             fail();
         }
         finally
@@ -458,68 +460,11 @@ public abstract class HttpWagonTestCase
         return ( file.lastModified() / 1000 ) * 1000;
     }
 
-    public void testGzipGet()
-        throws Exception
-    {
-        logger.info( "\n\nRunning test: " + getName() );
-
-        setupWagonTestingFixtures();
-
-        setupRepositories();
-
-        StreamingWagon wagon = (StreamingWagon) getWagon();
-
-        File srcFile = new File( getRepositoryPath() + "/gzip" );
-        // srcFile.deleteOnExit();
-
-        String resName = "gzip-res.txt";
-        String sourceContent = writeTestFileGzip( srcFile, resName );
-
-        wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
-
-        StringOutputStream out = new StringOutputStream();
-        try
-        {
-            wagon.getToStream( "gzip/" + resName, out );
-
-            assertEquals( sourceContent, out.toString() );
-        }
-        finally
-        {
-            wagon.disconnect();
-
-            tearDownWagonTestingFixtures();
-
-            stopTestServer();
-        }
-    }
-
-    private String writeTestFileGzip( final File parent, final String child )
-        throws IOException
-    {
-        File file = new File( parent, child );
-        file.getParentFile().mkdirs();
-        // file.deleteOnExit();
-        OutputStream out = new FileOutputStream( file );
-        out.write( child.getBytes() );
-        out.close();
-
-        file = new File( parent, child + ".gz" );
-        // file.deleteOnExit();
-        out = new FileOutputStream( file );
-        out = new GZIPOutputStream( out );
-        // write out different data than non-gz file, so we can
-        // assert the gz version was returned
-        String content = file.getAbsolutePath();
-        out.write( content.getBytes() );
-        out.close();
-        return content;
-    }
 
     public void testGetFileThatIsBiggerThanMaxHeap()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         long bytes = (long) ( Runtime.getRuntime().maxMemory() * 1.1 );
 
@@ -584,7 +529,7 @@ public abstract class HttpWagonTestCase
     private void runTestProxiedRequest( final ProxyInfo proxyInfo, final TestHeaderHandler handler )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         _handlers = Arrays.asList( handler );
 
@@ -680,7 +625,7 @@ public abstract class HttpWagonTestCase
     public void runTestSecuredGet( final AuthenticationInfo authInfo )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         _handlers = Arrays.asList( createSecuredContext() );
 
@@ -699,7 +644,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ), authInfo );
 
-        StringOutputStream out = new StringOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         try
         {
             wagon.getToStream( "secured/" + resName, out );
@@ -770,7 +715,7 @@ public abstract class HttpWagonTestCase
     public void runTestSecuredResourceExists( final AuthenticationInfo authInfo )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         ServletContextHandler context = createSecuredContext();
         _handlers = Arrays.asList( context );
@@ -851,7 +796,7 @@ public abstract class HttpWagonTestCase
     private void runTestPutFailure( final int status )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         StatusHandler handler = new StatusHandler();
         handler.setStatusToReturn( status );
@@ -929,7 +874,7 @@ public abstract class HttpWagonTestCase
     public void runTestSecuredPut( final AuthenticationInfo authInfo )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         AuthorizingSecurityHandler shandler = new AuthorizingSecurityHandler();
         PutHandler handler = new PutHandler( getRepositoryPath() );
@@ -979,7 +924,7 @@ public abstract class HttpWagonTestCase
     public void testPut()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         PutHandler handler = new PutHandler( getRepositoryPath() );
         _handlers = Arrays.asList( handler );
@@ -1022,7 +967,7 @@ public abstract class HttpWagonTestCase
     public void testPutFileThatIsBiggerThanMaxHeap()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         long bytes = (long) ( Runtime.getRuntime().maxMemory() * 1.1 );
 
@@ -1076,7 +1021,7 @@ public abstract class HttpWagonTestCase
     private void runTestGetUnknown( String url )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
         wagon.setTimeout( 5000 );
@@ -1085,7 +1030,7 @@ public abstract class HttpWagonTestCase
         {
             wagon.connect( new Repository( "id", url ) );
 
-            wagon.getToStream( "resource", new StringOutputStream() );
+            wagon.getToStream( "resource", new ByteArrayOutputStream() );
 
             fail();
         }
@@ -1110,7 +1055,7 @@ public abstract class HttpWagonTestCase
     private void runTestPutUnknown( String url )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         String resName = "put-res.txt";
         File srcFile = new File( getOutputPath(), resName );
@@ -1138,9 +1083,9 @@ public abstract class HttpWagonTestCase
     public void testHighLatencyGet()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
-        Handler handler = new LatencyHandler( 500 );
+        Handler handler = new LatencyHandler( 300, 10 );
         _handlers = Arrays.asList( handler );
 
         setupWagonTestingFixtures();
@@ -1149,17 +1094,15 @@ public abstract class HttpWagonTestCase
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
 
-        // NOTE: 500 < 2000 < 5000, i.e the connection idles for only 500 ms and the overall transfer takes 5000 ms
-        wagon.setTimeout( 2000 );
+        wagon.setTimeout( 10000 );
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        StringOutputStream out = new StringOutputStream();
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         try
         {
-            wagon.getToStream( "large.txt", out );
-
-            assertEquals( out.toString().length(), 10240 );
+            wagon.getToStream( "large.txt", byteArrayOutputStream );
+            assertEquals(10240, byteArrayOutputStream.toString().length() );
         }
         finally
         {
@@ -1174,9 +1117,9 @@ public abstract class HttpWagonTestCase
     public void testInfiniteLatencyGet()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
-        Handler handler = new LatencyHandler( -1 );
+        Handler handler = new LatencyHandler( -1, 100 );
         _handlers = Arrays.asList( handler );
 
         setupWagonTestingFixtures();
@@ -1189,7 +1132,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        StringOutputStream out = new StringOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         try
         {
             wagon.getToStream( "large.txt", out );
@@ -1244,7 +1187,7 @@ public abstract class HttpWagonTestCase
                                          boolean relativeLocation )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         Handler handler = new RedirectHandler( code, currUrl, origUrl, maxRedirects, relativeLocation );
         _handlers = Arrays.asList( handler );
@@ -1257,7 +1200,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        StringOutputStream out = new StringOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         try
         {
             wagon.getToStream( currUrl, out );
@@ -1289,7 +1232,7 @@ public abstract class HttpWagonTestCase
     private void runTestRedirectFail( int code, String currUrl, String origUrl, int maxRedirects )
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
         Handler handler = new RedirectHandler( code, currUrl, origUrl, maxRedirects, false );
         _handlers = Arrays.asList( handler );
@@ -1302,7 +1245,7 @@ public abstract class HttpWagonTestCase
 
         wagon.connect( new Repository( "id", getTestRepositoryUrl() ) );
 
-        StringOutputStream out = new StringOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         try
         {
             wagon.getToStream( currUrl, out );
@@ -1325,9 +1268,9 @@ public abstract class HttpWagonTestCase
     public void testGracefulFailureUnderMultithreadedMisuse()
         throws Exception
     {
-        logger.info( "\n\nRunning test: " + getName() );
+        logger.info( "Running test: " + getName() );
 
-        Handler handler = new LatencyHandler( 500 );
+        Handler handler = new LatencyHandler( 500, 2 );
         _handlers = Arrays.asList( handler );
 
         setupWagonTestingFixtures();
@@ -1466,7 +1409,7 @@ public abstract class HttpWagonTestCase
                             HttpServletResponse httpServletResponse )
             throws IOException, ServletException
         {
-            headers = new HashMap<String, String>();
+            headers = new HashMap<>();
             for ( Enumeration e = request.getHeaderNames(); e.hasMoreElements(); )
             {
                 String name = (String) e.nextElement();
@@ -1535,10 +1478,12 @@ public abstract class HttpWagonTestCase
         extends AbstractHandler
     {
         private long delay;
+        private int repeat;
 
-        public LatencyHandler( long delay )
+        public LatencyHandler( long delay, int repeat )
         {
             this.delay = delay;
+            this.repeat = repeat;
         }
 
         @Override
@@ -1546,7 +1491,7 @@ public abstract class HttpWagonTestCase
                             HttpServletResponse httpServletResponse )
             throws IOException, ServletException
         {
-            if ( ( (Request) request ).isHandled() )
+            if ( request.isHandled() )
             {
                 return;
             }
@@ -1574,13 +1519,13 @@ public abstract class HttpWagonTestCase
             byte[] buff = new byte[buffSize];
             randGen.nextBytes( buff );
 
-            for ( int idx = 0; idx < buffSize; idx++ )
-            {
-                buff[idx] = (byte) ( buff[idx] & 0x6F + (int) ' ' );
-            }
+//            for ( int idx = 0; idx < buffSize; idx++ )
+//            {
+//                buff[idx] = (byte) ( buff[idx] & 0x6F + (int) ' ' );
+//            }
 
             OutputStream out = httpServletResponse.getOutputStream();
-            for ( int cnt = 0; cnt < 10; cnt++ )
+            for ( int cnt = 0; cnt < repeat; cnt++ )
             {
                 try
                 {
