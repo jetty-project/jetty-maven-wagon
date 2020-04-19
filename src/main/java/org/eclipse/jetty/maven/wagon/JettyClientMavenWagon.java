@@ -36,6 +36,7 @@ import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.util.InputStreamContentProvider;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
@@ -54,6 +55,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -605,7 +607,21 @@ public class JettyClientMavenWagon
     protected Request newRequest(String uri)
     {
         Request request = getHttpClient().newRequest(uri).followRedirects(this.followRedirect);
-        _httpHeaders.forEach(request::header);
+
+        // User-Agent need special treatement
+        _httpHeaders.entrySet().stream()
+            .filter(entry -> !StringUtils.equalsIgnoreCase(entry.getKey(), HttpHeader.USER_AGENT.asString()))
+            .forEach(entry -> request.header(entry.getKey(), entry.getValue()));
+
+        _httpHeaders.entrySet().stream()
+            .filter(entry -> StringUtils.equalsIgnoreCase(entry.getKey(), HttpHeader.USER_AGENT.asString()))
+            .map(Map.Entry::getValue)
+            .findFirst()
+            .ifPresent(s ->
+            {
+                request.header(HttpHeader.USER_AGENT, null);
+                request.agent(s);
+            });
         return request.timeout(getTimeout(), TimeUnit.MILLISECONDS);
     }
     
