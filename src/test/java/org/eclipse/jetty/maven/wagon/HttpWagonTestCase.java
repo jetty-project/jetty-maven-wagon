@@ -383,9 +383,7 @@ public abstract class HttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }

@@ -290,11 +290,11 @@ public class JettyClientMavenWagon
                     {
                            //
                     })
-                    .onRequestFailure((request1, throwable) -> LOGGER.info("onRequestFailure: " +
+                    .onRequestFailure((request1, throwable) -> LOGGER.debug("onRequestFailure: " +
                                                                                request.getURI() +
                                                                                ":" +
                                                                                throwable.getMessage(), throwable))
-                    .onResponseFailure((response, throwable) -> LOGGER.info("onResponseFailure: " +
+                    .onResponseFailure((response, throwable) -> LOGGER.debug("onResponseFailure: " +
                                                                                 request.getURI() +
                                                                                 ":" +
                                                                                 throwable.getMessage(), throwable))
@@ -442,13 +442,12 @@ public class JettyClientMavenWagon
             ContentResponse contentResponse = request
                 .onComplete(result -> 
                 {
-                    LOGGER.info("PUT#onComplete");
+                    LOGGER.debug("PUT#onComplete");
                     firePutCompleted(resource, source);
                 })
                 .onRequestContent((request1, buffer) -> 
                 {
                     int size = buffer.limit() - buffer.position();
-                    //LOGGER.info("PUT#onRequestContent {}", size);
                     buffer.flip();
                     TransferEvent transferEvent = new TransferEvent(this, 
                                                                     resource,
@@ -458,7 +457,7 @@ public class JettyClientMavenWagon
                 })
                 .onResponseFailure((response, throwable) -> 
                 {
-                    LOGGER.info("PUT#onResponseFailure", throwable);
+                    LOGGER.debug("PUT#onResponseFailure", throwable);
                     fireTransferError(resource, new Exception(throwable), TransferEvent.REQUEST_PUT);
                 })
                 .send();
