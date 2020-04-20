@@ -549,14 +549,6 @@ public class JettyClientMavenWagon
         {
             source = new FileInputStream(srcFile);
         }
-
-        if (source != null && !source.markSupported())
-        {
-            BufferedInputStream bstream = new BufferedInputStream(source);
-            bstream.mark(srcFile == null ? Integer.MAX_VALUE : (int)srcFile.length());
-            source = bstream;
-        }
-
         request.content(new InputStreamContentProvider(source));
     }
 
