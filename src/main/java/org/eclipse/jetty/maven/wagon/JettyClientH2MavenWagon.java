@@ -28,6 +28,7 @@ public class JettyClientH2MavenWagon
     private int sessionRecvWindow = 16 * 1024 * 1024;
     private int streamRecvWindow = 16 * 1024 * 1024;
     private int selectors = 1;
+    private boolean useAlpn = true;
 
     @Override
     protected HttpClientTransport getHttpClientTransport()
@@ -38,7 +39,9 @@ public class JettyClientH2MavenWagon
         http2Client.setInitialSessionRecvWindow(getSessionRecvWindow());
         http2Client.setInitialStreamRecvWindow(getStreamRecvWindow());
         http2Client.setSelectors(getSelectors());
-        return new HttpClientTransportOverHTTP2(http2Client);
+        HttpClientTransportOverHTTP2 httpClientTransportOverHTTP2 = new HttpClientTransportOverHTTP2(http2Client);
+        httpClientTransportOverHTTP2.setUseALPN(useAlpn);
+        return httpClientTransportOverHTTP2;
     }
 
 
@@ -71,5 +74,15 @@ public class JettyClientH2MavenWagon
     public void setSelectors(int selectors )
     {
         this.selectors = selectors;
+    }
+
+    public boolean isUseAlpn()
+    {
+        return useAlpn;
+    }
+
+    public void setUseAlpn( boolean useAlpn )
+    {
+        this.useAlpn = useAlpn;
     }
 }

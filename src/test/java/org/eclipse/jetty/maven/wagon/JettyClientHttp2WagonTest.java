@@ -17,12 +17,14 @@
 //
 package org.eclipse.jetty.maven.wagon;
 
+import org.eclipse.jetty.alpn.server.ALPNServerConnectionFactory;
 import org.eclipse.jetty.http2.server.HTTP2ServerConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-
+import org.eclipse.jetty.server.SslConnectionFactory;
 
 public class JettyClientHttp2WagonTest
     extends JettyClientHttpsWagonTest
@@ -37,9 +39,23 @@ public class JettyClientHttp2WagonTest
     @Override
     protected Connector newHttpsConnector(boolean needClientAuth)
     {
-        ServerConnector connector = new ServerConnector( server,
-                                                         getSslContextFactory(needClientAuth),
-                                                         new HTTP2ServerConnectionFactory(new HttpConfiguration()));
-        return connector;
+
+        // HTTPS Configuration
+        HttpConfiguration httpsConfig = new HttpConfiguration();
+        httpsConfig.addCustomizer(new SecureRequestCustomizer());
+
+        // HTTP/2 Connection Factory
+        HTTP2ServerConnectionFactory h2 = new HTTP2ServerConnectionFactory(httpsConfig);
+
+        ALPNServerConnectionFactory alpn = new ALPNServerConnectionFactory();
+        alpn.setDefaultProtocol(h2.getProtocol());
+        // SSL Connection Factory
+        SslConnectionFactory ssl = new SslConnectionFactory( getSslContextFactory(needClientAuth), alpn.getProtocol());
+
+        // HTTP/2 Connector
+        ServerConnector http2Connector =
+            new ServerConnector(server,1, 1, ssl, alpn, h2, new HttpConnectionFactory(httpsConfig));
+
+        return http2Connector;
     }
 }
