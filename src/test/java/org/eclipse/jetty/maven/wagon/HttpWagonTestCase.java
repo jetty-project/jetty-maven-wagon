@@ -649,15 +649,14 @@ public abstract class HttpWagonTestCase
 
     public Handler createSecuredContext()
     {
-        HandlerList list = new HandlerList();
-        list.addHandler(new AuthorizingSecurityHandler());
+        AuthorizingSecurityHandler authorizingSecurityHandler = new AuthorizingSecurityHandler();
         ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
         root.setContextPath("/");
         root.setResourceBase(getRepositoryPath());
         ServletHolder servletHolder = new ServletHolder(new DefaultServlet());
         root.addServlet(servletHolder, "/*");
-        list.addHandler(root);
-        return list;
+        authorizingSecurityHandler.setHandler( root );
+        return authorizingSecurityHandler;
     }
 
     public void testSecuredResourceExistsUnauthorized()
@@ -782,8 +781,6 @@ public abstract class HttpWagonTestCase
     private void runTestPutFailure(int status)
         throws Exception
     {
-        
-
         StatusHandler handler = new StatusHandler(status);
         handler.setStatusToReturn(status);
         _handlers = Arrays.asList(handler);

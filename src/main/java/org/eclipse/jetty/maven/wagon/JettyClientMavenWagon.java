@@ -156,14 +156,6 @@ public class JettyClientMavenWagon
         }
         if (getHttpClient().isStopped())
         {
-//            try
-//            {
-//                getHttpClient().start();
-//            }
-//            catch (Exception e)
-//            {
-//                throw new ConnectionException(e.getMessage(), e);
-//            }
             httpClient = createHttpClient();
         }
 
