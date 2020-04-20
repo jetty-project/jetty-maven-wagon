@@ -26,7 +26,7 @@ pipeline {
               script {
                 if ( env.BRANCH_NAME == 'master' )
                 {
-                  mavenBuild( "jdk11", "deploy" )
+                  mavenBuild( "jdk11", "clean deploy -DskipTests" )
                 }
               }
             }
