@@ -38,10 +38,8 @@ public class JettyClientHttp2WagonTest
     protected Connector newHttpsConnector(boolean needClientAuth)
     {
         SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
-
         sslContextFactory.setKeyStorePath(getTestFile("src/test/resources/ssl/client-store").getAbsolutePath());
         sslContextFactory.setKeyStorePassword("client-pwd");
-        //sslContextFactory.setKeyPassword("keypwd");
 
         sslContextFactory.setTrustStorePath(getTestFile("src/test/resources/ssl/client-store").getAbsolutePath());
         sslContextFactory.setTrustStorePassword("client-pwd");

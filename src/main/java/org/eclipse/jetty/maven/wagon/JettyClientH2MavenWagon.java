@@ -21,7 +21,6 @@ package org.eclipse.jetty.maven.wagon;
 import org.eclipse.jetty.client.HttpClientTransport;
 import org.eclipse.jetty.http2.client.HTTP2Client;
 import org.eclipse.jetty.http2.client.http.HttpClientTransportOverHTTP2;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 public class JettyClientH2MavenWagon
     extends JettyClientMavenWagon

@@ -110,8 +110,8 @@ public class JettyClientMavenWagon
     {
         try
         {
-            HttpClient httpClient = new HttpClient(getHttpClientTransport(),
-                                                   new SslContextFactory.Client(sslInsecure));
+            SslContextFactory sslContextFactory = new SslContextFactory.Client(sslInsecure);
+            HttpClient httpClient = new HttpClient(getHttpClientTransport(), sslContextFactory);
             httpClient.start();
             return httpClient;
         }

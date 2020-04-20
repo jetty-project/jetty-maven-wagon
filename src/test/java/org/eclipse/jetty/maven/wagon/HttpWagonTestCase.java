@@ -128,7 +128,7 @@ public abstract class HttpWagonTestCase
         }
         repositoryDirectory.mkdirs();
 
-//        server.setDumpAfterStart(true);
+        server.setDumpAfterStart(true);
 //        server.setDumpBeforeStop(true);
 
         addConnectors(server);
