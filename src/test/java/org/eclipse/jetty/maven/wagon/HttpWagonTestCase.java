@@ -22,6 +22,7 @@ import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.apache.maven.wagon.StreamingWagon;
 import org.apache.maven.wagon.StreamingWagonTestCase;
 import org.apache.maven.wagon.TransferFailedException;
+import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.observers.ChecksumObserver;
@@ -41,7 +42,6 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -91,6 +91,18 @@ public abstract class HttpWagonTestCase
     {
         super.setUp();
         server = new Server();
+    }
+
+    @Override
+    protected Wagon getWagon()
+        throws Exception
+    {
+        JettyClientMavenWagon wagon = (JettyClientMavenWagon) super.getWagon();
+        // we only want to setup trustAll for our home made test certificate
+        // and this cannot be a default option
+        wagon.setSslInsecure( true);
+        wagon.getHttpClient().stop();
+        return wagon;
     }
 
     @Override
@@ -179,8 +191,8 @@ public abstract class HttpWagonTestCase
     {
         SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
 
-        sslContextFactory.setKeyStorePath(getTestFile("src/test/resources/ssl/keystore").getAbsolutePath());
-        sslContextFactory.setKeyStorePassword("storepwd");
+        sslContextFactory.setKeyStorePath(getTestFile("src/test/resources/ssl/client-store").getAbsolutePath());
+        sslContextFactory.setKeyStorePassword("client-pwd");
         //sslContextFactory.setKeyPassword("keypwd");
 
         sslContextFactory.setTrustStorePath(getTestFile("src/test/resources/ssl/client-store").getAbsolutePath());

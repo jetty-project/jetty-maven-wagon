@@ -29,23 +29,20 @@ import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.events.TransferEvent;
 import org.apache.maven.wagon.proxy.ProxyInfo;
-import org.apache.maven.wagon.proxy.ProxyInfoProvider;
-import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.resource.Resource;
 import org.codehaus.plexus.util.StringUtils;
-import org.eclipse.jetty.client.HttpAuthenticationStore;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpProxy;
 import org.eclipse.jetty.client.ProxyConfiguration;
-import org.eclipse.jetty.client.api.Authentication;
-import org.eclipse.jetty.client.api.AuthenticationStore;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.http.HttpClientTransportOverHTTP;
 import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.client.util.InputStreamContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +56,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,20 +92,24 @@ public class JettyClientMavenWagon
      */
     private boolean followRedirect = true;
 
-    private HttpClient httpClient = createHttpClient();
+    private HttpClient httpClient;
+
+    private boolean sslInsecure =
+        Boolean.valueOf(System.getProperty("maven.wagon.http.ssl.insecure", "false"));
 
     private Map<String, String> _httpHeaders = new HashMap<>();
 
     public JettyClientMavenWagon()
     {
-        //
+        this.httpClient = createHttpClient();
     }
 
-    private static HttpClient createHttpClient()
+    private HttpClient createHttpClient()
     {
         try
         {
-            HttpClient httpClient = new HttpClient();
+            HttpClient httpClient = new HttpClient(new HttpClientTransportOverHTTP(),
+                                                   new SslContextFactory.Client( sslInsecure ));
             httpClient.start();
             return httpClient;
         }
@@ -136,14 +139,6 @@ public class JettyClientMavenWagon
         }
     }
 
-//    @Override
-//    public void connect( Repository repository, AuthenticationInfo authenticationInfo,
-//                         ProxyInfoProvider proxyInfoProvider )
-//        throws ConnectionException, AuthenticationException
-//    {
-//        super.connect( repository, authenticationInfo, proxyInfoProvider );
-//    }
-
     @Override
     protected void openConnectionInternal()
         throws ConnectionException, AuthenticationException
@@ -154,7 +149,7 @@ public class JettyClientMavenWagon
         {
             getHttpClient().setMaxConnectionsPerDestination(this.maxConnections);
         }
-        if (getHttpClient().isStopped())
+        if (getHttpClient() == null || getHttpClient().isStopped())
         {
             httpClient = createHttpClient();
         }
@@ -173,7 +168,6 @@ public class JettyClientMavenWagon
             //if (proxyInfo.getUserName() != null)
         }
 
-        // TODO authz for PUT
         AuthenticationInfo authInfo = getAuthenticationInfo();
         if (authInfo != null && authInfo.getUserName() != null)
         {
@@ -189,39 +183,6 @@ public class JettyClientMavenWagon
                                                                                               authInfo.getPassword());
             getHttpClient().getAuthenticationStore().addAuthenticationResult(basicResult);
         }
-
-
-//        closeConnection();
-//
-//        try
-//        {
-//            HTTP_CLIENT = new HttpClient();
-//            
-//
-//            HTTP_CLIENT.setConnectorType(HttpClient.CONNECTOR_SELECT_CHANNEL);
-//            HTTP_CLIENT.setTimeout(super.getTimeout());
-//
-//            if (maxConnections > 0)
-//            {
-//                HTTP_CLIENT.setMaxConnectionsPerAddress(maxConnections);
-//            }
-//
-//            HTTP_CLIENT.setTrustStoreLocation(System.getProperty("javax.net.ssl.trustStore"));
-//            HTTP_CLIENT.setTrustStorePassword(System.getProperty("javax.net.ssl.trustStorePassword"));
-//            HTTP_CLIENT.setKeyStoreLocation(System.getProperty("javax.net.ssl.keyStore"));
-//            HTTP_CLIENT.setKeyStorePassword(System.getProperty("javax.net.ssl.keyStorePassword"));
-//            HTTP_CLIENT.setKeyManagerPassword(System.getProperty("javax.net.ssl.keyStorePassword"));
-//
-//
-//            setupClient();
-//
-//            HTTP_CLIENT.start();
-//        }
-//        catch (Exception ex)
-//        {
-//            HTTP_CLIENT = null;
-//            throw new ConnectionException(ex.getLocalizedMessage(), ex);
-//        }
     }
 
     /**
@@ -641,7 +602,14 @@ public class JettyClientMavenWagon
                 request.header(HttpHeader.USER_AGENT, null);
                 request.agent(s);
             });
-
+        ProxyInfo proxyInfo = getProxyInfo(getRepository().getProtocol(),getRepository().getHost());
+        if (proxyInfo != null && proxyInfo.getUserName() != null)
+        {
+            byte[] authBytes = (proxyInfo.getUserName() + ":"
+                + proxyInfo.getPassword()).getBytes( StandardCharsets.ISO_8859_1);
+            String value = "Basic " + Base64.getEncoder().encodeToString( authBytes);
+            request.header( HttpHeader.PROXY_AUTHORIZATION, value);
+        }
         return request.timeout(getTimeout(), TimeUnit.MILLISECONDS);
     }
     
@@ -689,5 +657,15 @@ public class JettyClientMavenWagon
     public void setFollowRedirect( boolean followRedirect )
     {
         this.followRedirect = followRedirect;
+    }
+
+    public boolean isSslInsecure()
+    {
+        return sslInsecure;
+    }
+
+    public void setSslInsecure( boolean sslInsecure )
+    {
+        this.sslInsecure = sslInsecure;
     }
 }

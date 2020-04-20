@@ -59,9 +59,8 @@ public class JettyClientHttpWagonTest
         _handlers.add(handler);
         connectors.addAll(Arrays.asList(newHttpsConnector(), newHttpConnector()));
 
-        setupRepositories();
-
         setupWagonTestingFixtures();
+        setupRepositories();
 
         handler.httpsPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
 
