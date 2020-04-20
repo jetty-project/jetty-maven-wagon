@@ -25,16 +25,23 @@ import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.apache.maven.wagon.StreamingWagon;
 import org.apache.maven.wagon.TransferFailedException;
 import org.apache.maven.wagon.authentication.AuthenticationException;
+import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.events.TransferEvent;
 import org.apache.maven.wagon.proxy.ProxyInfo;
+import org.apache.maven.wagon.proxy.ProxyInfoProvider;
+import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.resource.Resource;
 import org.codehaus.plexus.util.StringUtils;
+import org.eclipse.jetty.client.HttpAuthenticationStore;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpProxy;
 import org.eclipse.jetty.client.ProxyConfiguration;
+import org.eclipse.jetty.client.api.Authentication;
+import org.eclipse.jetty.client.api.AuthenticationStore;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.client.util.InputStreamContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
@@ -50,12 +57,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.net.URLEncoder;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +93,7 @@ public class JettyClientMavenWagon
      */
     private boolean followRedirect = true;
 
-    private static HttpClient HTTP_CLIENT = createHttpClient();
+    private HttpClient httpClient = createHttpClient();
 
     private Map<String, String> _httpHeaders = new HashMap<>();
 
@@ -112,7 +118,7 @@ public class JettyClientMavenWagon
 
     protected HttpClient getHttpClient()
     {
-        return HTTP_CLIENT;
+        return httpClient;
     }
 
     @Override
@@ -130,6 +136,13 @@ public class JettyClientMavenWagon
         }
     }
 
+//    @Override
+//    public void connect( Repository repository, AuthenticationInfo authenticationInfo,
+//                         ProxyInfoProvider proxyInfoProvider )
+//        throws ConnectionException, AuthenticationException
+//    {
+//        super.connect( repository, authenticationInfo, proxyInfoProvider );
+//    }
 
     @Override
     protected void openConnectionInternal()
@@ -141,7 +154,6 @@ public class JettyClientMavenWagon
         {
             getHttpClient().setMaxConnectionsPerDestination(this.maxConnections);
         }
-
         if (getHttpClient().isStopped())
         {
 //            try
@@ -152,7 +164,7 @@ public class JettyClientMavenWagon
 //            {
 //                throw new ConnectionException(e.getMessage(), e);
 //            }
-            HTTP_CLIENT = createHttpClient();
+            httpClient = createHttpClient();
         }
 
         ProxyInfo proxyInfo = getProxyInfo("http", getRepository().getHost());
@@ -163,14 +175,29 @@ public class JettyClientMavenWagon
             {
                 throw new ConnectionException("Connection failed: " + proxyType + " is not supported");
             }
-            ProxyConfiguration proxyConfiguration = HTTP_CLIENT.getProxyConfiguration();
+            ProxyConfiguration proxyConfiguration = httpClient.getProxyConfiguration();
             proxyConfiguration.getProxies().add(new HttpProxy(proxyInfo.getHost(), proxyInfo.getPort()));
             // TODO proxy authz
             //if (proxyInfo.getUserName() != null)
         }
+
         // TODO authz for PUT
-//        AuthenticationInfo authInfo = getAuthenticationInfo();
-//        if (authInfo != null && authInfo.getUserName() != null)
+        AuthenticationInfo authInfo = getAuthenticationInfo();
+        if (authInfo != null && authInfo.getUserName() != null)
+        {
+            URI uri = URI.create(getRepository().getUrl());
+            BasicAuthentication basicAuthentication = new BasicAuthentication(uri,
+                                                                              "realm-" + repository.getId(),
+                                                                              authInfo.getUserName(),
+                                                                              authInfo.getPassword());
+            getHttpClient().getAuthenticationStore().addAuthentication(basicAuthentication);
+            // preemptive
+            BasicAuthentication.BasicResult basicResult = new BasicAuthentication.BasicResult(uri,
+                                                                                              authInfo.getUserName(),
+                                                                                              authInfo.getPassword());
+            getHttpClient().getAuthenticationStore().addAuthenticationResult(basicResult);
+        }
+
 
 //        closeConnection();
 //
@@ -622,6 +649,7 @@ public class JettyClientMavenWagon
                 request.header(HttpHeader.USER_AGENT, null);
                 request.agent(s);
             });
+
         return request.timeout(getTimeout(), TimeUnit.MILLISECONDS);
     }
     

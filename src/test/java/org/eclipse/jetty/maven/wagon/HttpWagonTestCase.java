@@ -1426,7 +1426,7 @@ public abstract class HttpWagonTestCase
             HashLoginService hashLoginService = new HashLoginService();
             UserStore userStore = new UserStore();
             userStore.addUser("user", new Password("secret"), new String[]{"admin"});
-            hashLoginService.setUserStore(new UserStore());
+            hashLoginService.setUserStore(userStore);
             setLoginService(hashLoginService);
         }
     }
