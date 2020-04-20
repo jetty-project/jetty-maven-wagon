@@ -32,6 +32,7 @@ import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.apache.maven.wagon.resource.Resource;
 import org.codehaus.plexus.util.StringUtils;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.HttpClientTransport;
 import org.eclipse.jetty.client.HttpProxy;
 import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.api.ContentResponse;
@@ -99,6 +100,8 @@ public class JettyClientMavenWagon
 
     private Map<String, String> _httpHeaders = new HashMap<>();
 
+    private HttpClientTransport httpClientTransport = new HttpClientTransportOverHTTP();
+
     public JettyClientMavenWagon()
     {
         this.httpClient = createHttpClient();
@@ -108,8 +111,8 @@ public class JettyClientMavenWagon
     {
         try
         {
-            HttpClient httpClient = new HttpClient(new HttpClientTransportOverHTTP(),
-                                                   new SslContextFactory.Client( sslInsecure ));
+            HttpClient httpClient = new HttpClient(getHttpClientTransport(),
+                                                   new SslContextFactory.Client(sslInsecure));
             httpClient.start();
             return httpClient;
         }
@@ -117,6 +120,11 @@ public class JettyClientMavenWagon
         {
             throw new RuntimeException(e.getMessage(), e);
         }
+    }
+
+    protected HttpClientTransport getHttpClientTransport()
+    {
+        return this.httpClientTransport;
     }
 
     protected HttpClient getHttpClient()
