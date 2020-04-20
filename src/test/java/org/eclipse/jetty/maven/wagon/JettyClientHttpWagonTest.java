@@ -34,7 +34,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class JettyClientHttpWagonTest
-    extends HttpWagonTestCase
+    extends AbstractHttpWagonTestCase
 {
 
     @Override

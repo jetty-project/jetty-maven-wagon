@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.Properties;
 
 public class JettyClientHttpsWagonTest
-    extends HttpWagonTestCase
+    extends AbstractHttpWagonTestCase
 {
     @Override
     protected String getProtocol()

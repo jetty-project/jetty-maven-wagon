@@ -76,7 +76,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
-public abstract class HttpWagonTestCase
+public abstract class AbstractHttpWagonTestCase
     extends StreamingWagonTestCase
 {
 
@@ -128,7 +128,7 @@ public abstract class HttpWagonTestCase
         }
         repositoryDirectory.mkdirs();
 
-        server.setDumpAfterStart(true);
+//        server.setDumpAfterStart(true);
 //        server.setDumpBeforeStop(true);
 
         addConnectors(server);

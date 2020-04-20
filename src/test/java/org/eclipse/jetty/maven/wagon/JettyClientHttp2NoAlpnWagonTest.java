@@ -18,14 +18,11 @@
 package org.eclipse.jetty.maven.wagon;
 
 import org.apache.maven.wagon.Wagon;
-import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http2.server.HTTP2ServerConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SslConnectionFactory;
 
 public class JettyClientHttp2NoAlpnWagonTest
     extends JettyClientHttpsWagonTest
