@@ -26,6 +26,7 @@ import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.observers.ChecksumObserver;
+import org.apache.maven.wagon.observers.Debug;
 import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.resource.Resource;
@@ -93,11 +94,16 @@ public abstract class HttpWagonTestCase
         server = new Server();
     }
 
+    protected abstract String getWagonRoleHint();
+
     @Override
     protected Wagon getWagon()
         throws Exception
     {
-        JettyClientMavenWagon wagon = (JettyClientMavenWagon) super.getWagon();
+        JettyClientMavenWagon wagon = lookup(Wagon.ROLE, getWagonRoleHint());
+        Debug debug = new Debug();
+        wagon.addSessionListener( debug );
+        wagon.addTransferListener( debug );
         // we only want to setup trustAll for our home made test certificate
         // and this cannot be a default option
         wagon.setSslInsecure( true);

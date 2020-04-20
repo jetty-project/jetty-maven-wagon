@@ -44,6 +44,12 @@ public class JettyClientHttpWagonTest
     }
 
     @Override
+    protected String getWagonRoleHint()
+    {
+        return getProtocol();
+    }
+
+    @Override
     protected void setHttpHeaders(StreamingWagon wagon, Properties properties)
     {
         ((JettyClientMavenWagon) wagon).setHttpHeaders(properties);

@@ -95,12 +95,11 @@ public class JettyClientMavenWagon
 
     private HttpClient httpClient;
 
-    private boolean sslInsecure =
-        Boolean.valueOf(System.getProperty("maven.wagon.http.ssl.insecure", "false"));
+    private boolean sslInsecure = Boolean.getBoolean("maven.wagon.http.ssl.insecure");
 
-    private Map<String, String> _httpHeaders = new HashMap<>();
+    private final Map<String, String> _httpHeaders = new HashMap<>();
 
-    private HttpClientTransport httpClientTransport = new HttpClientTransportOverHTTP();
+    private final HttpClientTransport httpClientTransport = new HttpClientTransportOverHTTP();
 
     public JettyClientMavenWagon()
     {
@@ -288,21 +287,17 @@ public class JettyClientMavenWagon
             ContentResponse contentResponse;
                 contentResponse = request
                     .onResponseContent((response, buffer) ->
-                                       {
-                                           int size = buffer.limit() - buffer.position();
-                                           LOGGER.info("GET#onResponseContent {}", size);
-                                           // TODO see getResponseContentSource weird but done in another way...
-//                                           buffer.flip();
-//                                           TransferEvent transferEvent = new TransferEvent(this,
-//                                                                                            resource,
-//                                                                                            TransferEvent.TRANSFER_PROGRESS,
-//                                                                                            TransferEvent.REQUEST_GET);
-//                                           fireTransferProgress(transferEvent, buffer.array(), size);
-                                       })
-                    .onRequestFailure((request1, throwable) -> LOGGER.info("onRequestFailure: " + request.getURI() + ":"
-                                                                               +throwable.getMessage(), throwable))
-                    .onResponseFailure((response, throwable) -> LOGGER.info("onResponseFailure: " + request.getURI() + ":"
-                                                                                +throwable.getMessage(), throwable))
+                    {
+                           //
+                    })
+                    .onRequestFailure((request1, throwable) -> LOGGER.info("onRequestFailure: " +
+                                                                               request.getURI() +
+                                                                               ":" +
+                                                                               throwable.getMessage(), throwable))
+                    .onResponseFailure((response, throwable) -> LOGGER.info("onResponseFailure: " +
+                                                                                request.getURI() +
+                                                                                ":" +
+                                                                                throwable.getMessage(), throwable))
                     .send();
 
 
@@ -369,7 +364,7 @@ public class JettyClientMavenWagon
         }
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
-            LOGGER.error( "error connecting to " + request.getURI(), e);
+            LOGGER.error("error connecting to " + request.getURI(), e);
 
             fireTransferError(resource, e, TransferEvent.REQUEST_GET);
 
@@ -446,26 +441,26 @@ public class JettyClientMavenWagon
 
             ContentResponse contentResponse = request
                 .onComplete(result -> 
-                            {
-                                LOGGER.info("PUT#onComplete");
-                                firePutCompleted(resource, source);
-                            })
+                {
+                    LOGGER.info("PUT#onComplete");
+                    firePutCompleted(resource, source);
+                })
                 .onRequestContent((request1, buffer) -> 
-                            {
-                                int size = buffer.limit() - buffer.position();
-                                //LOGGER.info("PUT#onRequestContent {}", size);
-                                buffer.flip();
-                                TransferEvent transferEvent = new TransferEvent(this, 
-                                                                                resource,
-                                                                                TransferEvent.TRANSFER_PROGRESS, 
-                                                                                 TransferEvent.REQUEST_PUT);
-                                fireTransferProgress(transferEvent, buffer.array(), size);
-                            })
+                {
+                    int size = buffer.limit() - buffer.position();
+                    //LOGGER.info("PUT#onRequestContent {}", size);
+                    buffer.flip();
+                    TransferEvent transferEvent = new TransferEvent(this, 
+                                                                    resource,
+                                                                    TransferEvent.TRANSFER_PROGRESS, 
+                                                                     TransferEvent.REQUEST_PUT);
+                    fireTransferProgress(transferEvent, buffer.array(), size);
+                })
                 .onResponseFailure((response, throwable) -> 
-                            {
-                                LOGGER.info("PUT#onResponseFailure", throwable);
-                                fireTransferError(resource, new Exception(throwable), TransferEvent.REQUEST_PUT);
-                            })
+                {
+                    LOGGER.info("PUT#onResponseFailure", throwable);
+                    fireTransferError(resource, new Exception(throwable), TransferEvent.REQUEST_PUT);
+                })
                 .send();
 
             int responseStatus = contentResponse.getStatus();
@@ -613,10 +608,10 @@ public class JettyClientMavenWagon
         ProxyInfo proxyInfo = getProxyInfo(getRepository().getProtocol(),getRepository().getHost());
         if (proxyInfo != null && proxyInfo.getUserName() != null)
         {
-            byte[] authBytes = (proxyInfo.getUserName() + ":"
-                + proxyInfo.getPassword()).getBytes( StandardCharsets.ISO_8859_1);
-            String value = "Basic " + Base64.getEncoder().encodeToString( authBytes);
-            request.header( HttpHeader.PROXY_AUTHORIZATION, value);
+            byte[] authBytes = (proxyInfo.getUserName() + ":" + 
+                proxyInfo.getPassword()).getBytes(StandardCharsets.ISO_8859_1);
+            String value = "Basic " + Base64.getEncoder().encodeToString(authBytes);
+            request.header(HttpHeader.PROXY_AUTHORIZATION, value);
         }
         return request.timeout(getTimeout(), TimeUnit.MILLISECONDS);
     }
@@ -642,7 +637,7 @@ public class JettyClientMavenWagon
         return useCache;
     }
 
-    public void setUseCache( boolean useCache )
+    public void setUseCache(boolean useCache)
     {
         this.useCache = useCache;
     }
@@ -652,7 +647,7 @@ public class JettyClientMavenWagon
         return maxConnections;
     }
 
-    public void setMaxConnections( int maxConnections )
+    public void setMaxConnections(int maxConnections)
     {
         this.maxConnections = maxConnections;
     }
@@ -662,7 +657,7 @@ public class JettyClientMavenWagon
         return followRedirect;
     }
 
-    public void setFollowRedirect( boolean followRedirect )
+    public void setFollowRedirect(boolean followRedirect)
     {
         this.followRedirect = followRedirect;
     }
@@ -672,7 +667,7 @@ public class JettyClientMavenWagon
         return sslInsecure;
     }
 
-    public void setSslInsecure( boolean sslInsecure )
+    public void setSslInsecure(boolean sslInsecure)
     {
         this.sslInsecure = sslInsecure;
     }
