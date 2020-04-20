@@ -37,16 +37,8 @@ public class JettyClientHttp2WagonTest
     @Override
     protected Connector newHttpsConnector(boolean needClientAuth)
     {
-        SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
-        sslContextFactory.setKeyStorePath(getTestFile("src/test/resources/ssl/client-store").getAbsolutePath());
-        sslContextFactory.setKeyStorePassword("client-pwd");
-
-        sslContextFactory.setTrustStorePath(getTestFile("src/test/resources/ssl/client-store").getAbsolutePath());
-        sslContextFactory.setTrustStorePassword("client-pwd");
-        sslContextFactory.setNeedClientAuth(needClientAuth);
-
         ServerConnector connector = new ServerConnector( server,
-                                                         sslContextFactory,
+                                                         getSslContextFactory(needClientAuth),
                                                          new HTTP2ServerConnectionFactory(new HttpConfiguration()));
         return connector;
     }
