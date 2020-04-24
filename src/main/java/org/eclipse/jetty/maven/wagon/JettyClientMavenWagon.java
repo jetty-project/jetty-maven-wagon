@@ -299,7 +299,7 @@ public class JettyClientMavenWagon
                     {
                            //
                     })
-                    .onRequestFailure((request1, throwable) -> LOGGER.debug( "onRequestFailure: " +
+                    .onRequestFailure((request1, throwable) -> LOGGER.debug("onRequestFailure: " +
                                                                                request.getURI() +
                                                                                ":" +
                                                                                throwable.getMessage(), throwable))
