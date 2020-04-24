@@ -47,7 +47,6 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -93,24 +92,18 @@ public class JettyClientMavenWagon
      */
     private boolean followRedirect = true;
 
-    private HttpClient httpClient;
+    private static HttpClient HTTP_CLIENT = createHttpClient();
 
-    private boolean sslInsecure = Boolean.getBoolean("maven.wagon.http.ssl.insecure");
+    protected static boolean SSL_INSECURE = Boolean.getBoolean("maven.wagon.http.ssl.insecure");
 
     private final Map<String, String> _httpHeaders = new HashMap<>();
 
-    private final HttpClientTransport httpClientTransport = new HttpClientTransportOverHTTP();
-
-    public JettyClientMavenWagon()
+    private static HttpClient createHttpClient()
     {
-        this.httpClient = createHttpClient();
-    }
-
-    private HttpClient createHttpClient()
-    {
+        LOGGER.info("createHttpClient");
         try
         {
-            SslContextFactory sslContextFactory = new SslContextFactory.Client(sslInsecure);
+            SslContextFactory sslContextFactory = new SslContextFactory.Client(SSL_INSECURE);
             HttpClient httpClient = new HttpClient(getHttpClientTransport(), sslContextFactory);
             httpClient.start();
             return httpClient;
@@ -121,14 +114,19 @@ public class JettyClientMavenWagon
         }
     }
 
-    protected HttpClientTransport getHttpClientTransport()
+    protected void restartClient()
     {
-        return this.httpClientTransport;
+        HTTP_CLIENT = createHttpClient();
+    }
+
+    protected static HttpClientTransport getHttpClientTransport()
+    {
+        return new HttpClientTransportOverHTTP();
     }
 
     protected HttpClient getHttpClient()
     {
-        return httpClient;
+        return HTTP_CLIENT;
     }
 
     @Override
@@ -150,7 +148,7 @@ public class JettyClientMavenWagon
     protected void openConnectionInternal()
         throws ConnectionException, AuthenticationException
     {
-
+        LOGGER.debug("openConnection");
         getHttpClient().setFollowRedirects(this.isFollowRedirect());
         if (this.maxConnections > 0)
         {
@@ -158,7 +156,7 @@ public class JettyClientMavenWagon
         }
         if (getHttpClient() == null || getHttpClient().isStopped())
         {
-            httpClient = createHttpClient();
+            restartClient();
         }
 
         ProxyInfo proxyInfo = getProxyInfo("http", getRepository().getHost());
@@ -169,7 +167,7 @@ public class JettyClientMavenWagon
             {
                 throw new ConnectionException("Connection failed: " + proxyType + " is not supported");
             }
-            ProxyConfiguration proxyConfiguration = httpClient.getProxyConfiguration();
+            ProxyConfiguration proxyConfiguration = getHttpClient().getProxyConfiguration();
             proxyConfiguration.getProxies().add(new HttpProxy(proxyInfo.getHost(), proxyInfo.getPort()));
             // TODO proxy authz
             //if (proxyInfo.getUserName() != null)
@@ -206,6 +204,17 @@ public class JettyClientMavenWagon
         int index = baseUrl.indexOf('/');
 
         String protocol = baseUrl.substring(0, index);
+        switch (protocol)
+        {
+            case "h2:":
+                protocol = "https:";
+                break;
+            case "h2c:":
+                protocol = "http:";
+                break;
+            default:
+                // do nothing
+        }
         urlBuilder.append(protocol);
 
         urlBuilder.append(baseUrl.substring(index));
@@ -290,11 +299,11 @@ public class JettyClientMavenWagon
                     {
                            //
                     })
-                    .onRequestFailure((request1, throwable) -> LOGGER.debug("onRequestFailure: " +
+                    .onRequestFailure((request1, throwable) -> LOGGER.debug( "onRequestFailure: " +
                                                                                request.getURI() +
                                                                                ":" +
                                                                                throwable.getMessage(), throwable))
-                    .onResponseFailure((response, throwable) -> LOGGER.debug("onResponseFailure: " +
+                    .onResponseFailure((response, throwable) -> LOGGER.debug( "onResponseFailure: " +
                                                                                 request.getURI() +
                                                                                 ":" +
                                                                                 throwable.getMessage(), throwable))
@@ -364,7 +373,7 @@ public class JettyClientMavenWagon
         }
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
-            LOGGER.error("error connecting to " + request.getURI(), e);
+            LOGGER.error( "error connecting to " + request.getURI(), e);
 
             fireTransferError(resource, e, TransferEvent.REQUEST_GET);
 
@@ -442,7 +451,7 @@ public class JettyClientMavenWagon
             ContentResponse contentResponse = request
                 .onComplete(result -> 
                 {
-                    LOGGER.debug("PUT#onComplete");
+                    LOGGER.debug( "PUT#onComplete");
                     firePutCompleted(resource, source);
                 })
                 .onRequestContent((request1, buffer) -> 
@@ -457,7 +466,7 @@ public class JettyClientMavenWagon
                 })
                 .onResponseFailure((response, throwable) -> 
                 {
-                    LOGGER.debug("PUT#onResponseFailure", throwable);
+                    LOGGER.debug( "PUT#onResponseFailure", throwable);
                     fireTransferError(resource, new Exception(throwable), TransferEvent.REQUEST_PUT);
                 })
                 .send();
@@ -490,7 +499,7 @@ public class JettyClientMavenWagon
 
                 default:
                 {
-                    LOGGER.warn("Transfer failed: [{}] {}",responseStatus, resourceUrl);
+                    LOGGER.warn( "Transfer failed: [{}] {}", responseStatus, resourceUrl);
                     TransferFailedException ex =
                         new TransferFailedException("Transfer failed: [" + responseStatus + "] " + resourceUrl);
                     fireTransferError(resource, ex, TransferEvent.REQUEST_PUT);
@@ -655,11 +664,11 @@ public class JettyClientMavenWagon
 
     public boolean isSslInsecure()
     {
-        return sslInsecure;
+        return SSL_INSECURE;
     }
 
     public void setSslInsecure(boolean sslInsecure)
     {
-        this.sslInsecure = sslInsecure;
+        this.SSL_INSECURE = sslInsecure;
     }
 }

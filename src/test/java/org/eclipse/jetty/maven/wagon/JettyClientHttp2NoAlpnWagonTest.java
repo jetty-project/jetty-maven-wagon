@@ -35,11 +35,19 @@ public class JettyClientHttp2NoAlpnWagonTest
     }
 
     @Override
+    protected void tearDown()
+        throws Exception
+    {
+        super.tearDown();
+        JettyClientH2MavenWagon.useAlpn = true;
+    }
+
+    @Override
     protected Wagon getWagon()
         throws Exception
     {
+        JettyClientH2MavenWagon.useAlpn = false;
         JettyClientH2MavenWagon wagon = (JettyClientH2MavenWagon)super.getWagon();
-        wagon.setUseAlpn(false);
         return wagon;
     }
 

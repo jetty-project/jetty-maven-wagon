@@ -102,6 +102,11 @@
       <artifactId>http2-http-client-transport</artifactId>
       <version>${jetty.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-alpn-client</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
@@ -192,6 +197,9 @@
       <id>jetty-snapshots</id>
       <url>http://oss.sonatype.org/content/groups/jetty/</url>
       <name>jetty Snapshots</name>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
