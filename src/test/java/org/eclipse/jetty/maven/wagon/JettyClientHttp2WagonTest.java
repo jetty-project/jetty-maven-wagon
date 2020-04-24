@@ -17,6 +17,8 @@
 //
 package org.eclipse.jetty.maven.wagon;
 
+import org.apache.maven.wagon.Wagon;
+import org.apache.maven.wagon.repository.Repository;
 import org.eclipse.jetty.alpn.server.ALPNServerConnectionFactory;
 import org.eclipse.jetty.http2.server.HTTP2ServerConnectionFactory;
 import org.eclipse.jetty.server.Connector;
@@ -25,6 +27,10 @@ import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class JettyClientHttp2WagonTest
     extends JettyClientHttpsWagonTest
@@ -58,4 +64,17 @@ public class JettyClientHttp2WagonTest
 
         return http2Connector;
     }
+
+    public void testGetRealResource()
+        throws Exception
+    {
+        Wagon wagon = getWagon();
+        Repository repository = new Repository("central","https://repo.maven.apache.org/maven2/");
+        wagon.connect( repository );
+        Path tmp = Files.createTempFile( "test", "jetty-client");
+        wagon.get( "org/eclipse/jetty/jetty-client/9.4.28.v20200408/jetty-client-9.4.28.v20200408.jar",
+                   tmp.toFile() );
+        assertTrue( tmp.toFile().exists() );
+    }
+
 }

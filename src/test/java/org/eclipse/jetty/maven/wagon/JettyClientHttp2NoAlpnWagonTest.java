@@ -39,7 +39,7 @@ public class JettyClientHttp2NoAlpnWagonTest
         throws Exception
     {
         super.tearDown();
-        JettyClientH2MavenWagon.useAlpn = true;
+        JettyClientH2MavenWagon.useAlpn = false;
     }
 
     @Override

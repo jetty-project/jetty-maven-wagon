@@ -373,7 +373,7 @@ public class JettyClientMavenWagon
         }
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
-            LOGGER.error( "error connecting to " + request.getURI(), e);
+            LOGGER.error("error connecting to " + request.getURI(), e);
 
             fireTransferError(resource, e, TransferEvent.REQUEST_GET);
 
@@ -466,7 +466,7 @@ public class JettyClientMavenWagon
                 })
                 .onResponseFailure((response, throwable) -> 
                 {
-                    LOGGER.debug( "PUT#onResponseFailure", throwable);
+                    LOGGER.debug("PUT#onResponseFailure", throwable);
                     fireTransferError(resource, new Exception(throwable), TransferEvent.REQUEST_PUT);
                 })
                 .send();
@@ -499,7 +499,7 @@ public class JettyClientMavenWagon
 
                 default:
                 {
-                    LOGGER.warn( "Transfer failed: [{}] {}", responseStatus, resourceUrl);
+                    LOGGER.warn("Transfer failed: [{}] {}", responseStatus, resourceUrl);
                     TransferFailedException ex =
                         new TransferFailedException("Transfer failed: [" + responseStatus + "] " + resourceUrl);
                     fireTransferError(resource, ex, TransferEvent.REQUEST_PUT);
@@ -592,6 +592,7 @@ public class JettyClientMavenWagon
         Request request = getHttpClient().newRequest(uri).followRedirects(this.followRedirect);
 
         // User-Agent need special treatement
+        // until this one fixed https://github.com/eclipse/jetty.project/issues/4808
         _httpHeaders.entrySet().stream()
             .filter(entry -> !StringUtils.equalsIgnoreCase(entry.getKey(), HttpHeader.USER_AGENT.asString()))
             .forEach(entry -> request.header(entry.getKey(), entry.getValue()));

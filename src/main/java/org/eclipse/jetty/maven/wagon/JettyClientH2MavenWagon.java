@@ -48,7 +48,7 @@ public class JettyClientH2MavenWagon
     private static int streamRecvWindow = Integer.getInteger("maven.wagon.http.h2.streamRecvWindow",
                                                              16 * 1024 * 1024);
     private static int selectors = Integer.getInteger("maven.wagon.http.h2.jetty.selectors", 1);
-    protected static boolean useAlpn = Boolean.parseBoolean(System.getProperty("maven.wagon.http.ssl.useAlpn", "false"));
+    protected static boolean useAlpn = Boolean.parseBoolean(System.getProperty("maven.wagon.http.ssl.useAlpn", "true"));
 
     protected static HttpClientTransport getHttpClientTransport()
     {
