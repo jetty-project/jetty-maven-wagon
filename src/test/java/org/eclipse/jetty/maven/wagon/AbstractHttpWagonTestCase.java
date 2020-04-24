@@ -310,8 +310,14 @@ public abstract class AbstractHttpWagonTestCase
         tearDownWagonTestingFixtures();
 
         stopTestServer();
-
-        assertEquals("Maven-Wagon/1.0", handler.headers.get("User-Agent"));
+        if (getProtocol().startsWith( "h2" ))
+        {
+            assertEquals("Maven-Wagon/1.0", handler.headers.get("user-agent"));
+        }
+        else
+        {
+            assertEquals("Maven-Wagon/1.0", handler.headers.get("User-Agent"));
+        }
     }
 
     protected abstract void setHttpHeaders(StreamingWagon wagon, Properties properties);
