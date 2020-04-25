@@ -50,6 +50,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,13 +311,13 @@ public abstract class AbstractHttpWagonTestCase
         tearDownWagonTestingFixtures();
 
         stopTestServer();
-        if (getProtocol().startsWith( "h2" ))
+        if (getWagonRoleHint().startsWith( "h2" ))
         {
-            assertEquals("Maven-Wagon/1.0", handler.headers.get("user-agent"));
+            Assert.assertEquals( "Headers:" + handler.headers, "Maven-Wagon/1.0", handler.headers.get( "user-agent"));
         }
         else
         {
-            assertEquals("Maven-Wagon/1.0", handler.headers.get("User-Agent"));
+            assertEquals("Headers:" + handler.headers, "Maven-Wagon/1.0", handler.headers.get("User-Agent"));
         }
     }
 
