@@ -62,4 +62,9 @@ public class JettyClientHttp2NoAlpnWagonTest
 
         return http2Connector;
     }
+
+    public void testGetRedirectFromHttpToHttps()
+    {
+        // no sense here
+    }
 }

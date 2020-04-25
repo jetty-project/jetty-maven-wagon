@@ -39,4 +39,9 @@ public class JettyClientHttp2CWagonTest
                                                          new HTTP2CServerConnectionFactory(new HttpConfiguration()));
         return connector;
     }
+
+    public void testGetRedirectFromHttpToHttps()
+    {
+        // no sense here
+    }
 }

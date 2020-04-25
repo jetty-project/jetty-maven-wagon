@@ -65,6 +65,11 @@ public class JettyClientHttp2WagonTest
         return http2Connector;
     }
 
+    public void testGetRedirectFromHttpToHttps()
+    {
+        // no sense here
+    }
+
     public void testGetRealResource()
         throws Exception
     {
@@ -76,5 +81,7 @@ public class JettyClientHttp2WagonTest
                    tmp.toFile() );
         assertTrue( tmp.toFile().exists() );
     }
+
+
 
 }
