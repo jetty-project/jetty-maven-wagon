@@ -37,9 +37,12 @@ import org.eclipse.jetty.client.HttpProxy;
 import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.client.http.HttpClientTransportOverHTTP;
 import org.eclipse.jetty.client.util.BasicAuthentication;
+import org.eclipse.jetty.client.util.FutureResponseListener;
 import org.eclipse.jetty.client.util.InputStreamContentProvider;
+import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
@@ -57,6 +60,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Base64;
@@ -68,6 +72,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
@@ -296,68 +301,132 @@ public class JettyClientMavenWagon
         }
 
         AtomicBoolean retValue = new AtomicBoolean(Boolean.FALSE);
-
+        AtomicInteger responseStatus = new AtomicInteger(HttpStatus.OK_200);
         // this method can be called only to check if the resource exists so we do not download it and output are null
         try (OutputStream destinationStream = stream != null ? stream
             : destination != null ? Files.newOutputStream(destination.toPath()) : null)
         {
 
-            ContentResponse contentResponse;
-                contentResponse = request
-                    .onRequestFailure((request1, throwable) -> LOGGER.debug("onRequestFailure: " +
-                                                                               request.getURI() +
-                                                                               ":" +
-                                                                               throwable.getMessage(), throwable))
-                    .onResponseFailure((response, throwable) -> LOGGER.debug("onResponseFailure: " +
-                                                                                request.getURI() +
-                                                                                ":" +
-                                                                                throwable.getMessage(), throwable))
-                    .onResponseHeaders(response ->
+            FutureResponseListener listener = new FutureResponseListener(request)
+            {
+                @Override
+                public void onFailure(Response response, Throwable failure)
+                {
+                    LOGGER.debug("onResponseFailure: " +
+                                     request.getURI() +
+                                     ":" +
+                                     failure.getMessage(), failure);
+                }
+
+                @Override
+                public void onHeaders(Response response)
+                {
+                    resource.setLastModified(response.getHeaders().getDateField("Last-Modified"));
+                    if (timestamp == 0 || timestamp < resource.getLastModified())
                     {
-                        resource.setLastModified(response.getHeaders().getDateField("Last-Modified"));
-                        if (timestamp == 0 || timestamp < resource.getLastModified())
-                        {
-                            retValue.set(true);
-                        }
-                        resource.setContentLength(response.getHeaders().getLongField("Content-Length"));
-                        if (destinationStream != null && resource.getContentLength() > 0 && retValue.get())
-                        {
-                            fireGetStarted(resource, destination);
-                        }
-                    })
-                    .onResponseContent((response, buffer) ->
+                        retValue.set(true);
+                    }
+                    resource.setContentLength(response.getHeaders().getLongField("Content-Length"));
+                    if (destinationStream != null && resource.getContentLength() > 0 && retValue.get())
                     {
-                        //int size = buffer.limit() - buffer.position();
-                        byte[] bytes = BufferUtil.toArray(buffer);
-                        try
-                        {
-                            if (destinationStream != null && retValue.get())
-                            {
-                                destinationStream.write(bytes);
-                                TransferEvent transferEvent = new TransferEvent(this,
-                                                                                resource,
-                                                                                TransferEvent.TRANSFER_PROGRESS,
-                                                                                TransferEvent.REQUEST_GET);
-                                fireTransferProgress(transferEvent, bytes, bytes.length);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            throw new RuntimeException(e.getMessage(),e);
-                        }
-                    })
-                    .onResponseSuccess(response ->
+                        fireGetStarted(resource, destination);
+                    }
+                }
+
+                @Override
+                public void onContent(Response response, ByteBuffer buffer)
+                {
+                    //int size = buffer.limit() - buffer.position();
+                    byte[] bytes = BufferUtil.toArray(buffer);
+                    try
                     {
                         if (destinationStream != null && retValue.get())
                         {
-                            fireGetCompleted(resource, destination);
+                            destinationStream.write(bytes);
+                            TransferEvent transferEvent = new TransferEvent(JettyClientMavenWagon.this,
+                                                                            resource,
+                                                                            TransferEvent.TRANSFER_PROGRESS,
+                                                                            TransferEvent.REQUEST_GET);
+                            fireTransferProgress(transferEvent, bytes, bytes.length);
                         }
-                    })
-                    .send();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new RuntimeException(e.getMessage(),e);
+                    }
+                }
+
+                @Override
+                public void onSuccess(Response response)
+                {
+                    if (destinationStream != null && retValue.get())
+                    {
+                        fireGetCompleted(resource, destination);
+                    }
+                    responseStatus.set(response.getStatus());
+                }
+            };
+            request.send(listener);
+            listener.get(getReadTimeout(), TimeUnit.MILLISECONDS);
 
 
-            int responseStatus = contentResponse.getStatus();
-            switch (responseStatus)
+
+
+//            ContentResponse contentResponse = request
+//                    .onRequestFailure((request1, throwable) -> LOGGER.debug("onRequestFailure: " +
+//                                                                               request.getURI() +
+//                                                                               ":" +
+//                                                                               throwable.getMessage(), throwable))
+//                    .onResponseFailure((response, throwable) -> LOGGER.debug("onResponseFailure: " +
+//                                                                                request.getURI() +
+//                                                                                ":" +
+//                                                                                throwable.getMessage(), throwable))
+//                    .onResponseHeaders(response ->
+//                    {
+//                        resource.setLastModified(response.getHeaders().getDateField("Last-Modified"));
+//                        if (timestamp == 0 || timestamp < resource.getLastModified())
+//                        {
+//                            retValue.set(true);
+//                        }
+//                        resource.setContentLength(response.getHeaders().getLongField("Content-Length"));
+//                        if (destinationStream != null && resource.getContentLength() > 0 && retValue.get())
+//                        {
+//                            fireGetStarted(resource, destination);
+//                        }
+//                    })
+//                    .onResponseContent((response, buffer) ->
+//                    {
+//                        //int size = buffer.limit() - buffer.position();
+//                        byte[] bytes = BufferUtil.toArray(buffer);
+//                        try
+//                        {
+//                            if (destinationStream != null && retValue.get())
+//                            {
+//                                destinationStream.write(bytes);
+//                                TransferEvent transferEvent = new TransferEvent(this,
+//                                                                                resource,
+//                                                                                TransferEvent.TRANSFER_PROGRESS,
+//                                                                                TransferEvent.REQUEST_GET);
+//                                fireTransferProgress(transferEvent, bytes, bytes.length);
+//                            }
+//                        }
+//                        catch (Exception e)
+//                        {
+//                            throw new RuntimeException(e.getMessage(),e);
+//                        }
+//                    })
+//                    .onResponseSuccess(response ->
+//                    {
+//                        if (destinationStream != null && retValue.get())
+//                        {
+//                            fireGetCompleted(resource, destination);
+//                        }
+//                    })
+//                    .send();
+
+
+            //int responseStatus = contentResponse.getStatus();
+            switch (responseStatus.get())
             {
                 case HttpStatus.OK_200:
                 case HttpStatus.NOT_MODIFIED_304:
@@ -662,7 +731,8 @@ public class JettyClientMavenWagon
             String value = "Basic " + Base64.getEncoder().encodeToString(authBytes);
             request.header(HttpHeader.PROXY_AUTHORIZATION, value);
         }
-        return request.timeout(getTimeout(), TimeUnit.MILLISECONDS);
+        return request.idleTimeout(getTimeout(), TimeUnit.MILLISECONDS)
+                        .timeout(getReadTimeout(), TimeUnit.MILLISECONDS);
     }
     
     protected void mkdirs(String dirname)
