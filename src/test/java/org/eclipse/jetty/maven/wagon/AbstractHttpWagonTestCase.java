@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.stream.StreamSupport;
 
 public abstract class AbstractHttpWagonTestCase
     extends StreamingWagonTestCase
@@ -86,6 +87,8 @@ public abstract class AbstractHttpWagonTestCase
     protected Server server;
     protected List<Connector> connectors = new ArrayList<>();
     protected List<Handler> _handlers = new ArrayList<>();
+
+    Debug debug = new Debug();
 
     @Override
     protected void setUp()
@@ -102,9 +105,9 @@ public abstract class AbstractHttpWagonTestCase
         throws Exception
     {
         JettyClientMavenWagon wagon = lookup(Wagon.ROLE, getWagonRoleHint());
-        Debug debug = new Debug();
-        wagon.addSessionListener( debug );
-        wagon.addTransferListener( debug );
+
+        wagon.addSessionListener(debug);
+        wagon.addTransferListener(debug);
         // we only want to setup trustAll for our home made test certificate
         // and this cannot be a default option
         wagon.setSslInsecure( true);
@@ -494,7 +497,9 @@ public abstract class AbstractHttpWagonTestCase
 
         File hugeFile = File.createTempFile("wagon-test-" + getName(), ".tmp");
         hugeFile.deleteOnExit();
-
+        // avoid too much noise for this test
+        wagon.removeSessionListener(debug);
+        wagon.removeTransferListener(debug);
         try
         {
             wagon.get("huge.txt", hugeFile);
@@ -502,10 +507,11 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
+            wagon.addSessionListener(debug);
+            wagon.addTransferListener(debug);
+
         }
 
         assertTrue(hugeFile.isFile());
@@ -1230,8 +1236,6 @@ public abstract class AbstractHttpWagonTestCase
     private void runTestRedirectFail(int code, String currUrl, String origUrl, int maxRedirects)
         throws Exception
     {
-        
-
         Handler handler = new RedirectHandler(code, currUrl, origUrl, maxRedirects, false);
         _handlers = Arrays.asList(handler);
 
@@ -1498,11 +1502,6 @@ public abstract class AbstractHttpWagonTestCase
             int buffSize = 1024;
             byte[] buff = new byte[buffSize];
             randGen.nextBytes(buff);
-
-//            for (int idx = 0; idx < buffSize; idx++)
-//            {
-//                buff[idx] = (byte) (buff[idx] & 0x6F + (int) ' ');
-//            }
 
             OutputStream out = httpServletResponse.getOutputStream();
             for (int cnt = 0; cnt < repeat; cnt++)
