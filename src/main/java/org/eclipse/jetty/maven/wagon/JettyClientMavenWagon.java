@@ -43,6 +43,7 @@ import org.eclipse.jetty.client.util.InputStreamContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
+import org.eclipse.jetty.util.BufferUtil;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -65,6 +67,8 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -291,22 +295,64 @@ public class JettyClientMavenWagon
                 .header("Cache-Control", "no-cache, no-store");
         }
 
-        try
+        AtomicBoolean retValue = new AtomicBoolean(Boolean.FALSE);
+
+        // this method can be called only to check if the resource exists so we do not download it and output are null
+        try (OutputStream destinationStream = stream != null ? stream
+            : destination != null ? Files.newOutputStream(destination.toPath()) : null)
         {
+
             ContentResponse contentResponse;
                 contentResponse = request
-                    .onResponseContent((response, buffer) ->
-                    {
-                           //
-                    })
                     .onRequestFailure((request1, throwable) -> LOGGER.debug("onRequestFailure: " +
                                                                                request.getURI() +
                                                                                ":" +
                                                                                throwable.getMessage(), throwable))
-                    .onResponseFailure((response, throwable) -> LOGGER.debug( "onResponseFailure: " +
+                    .onResponseFailure((response, throwable) -> LOGGER.debug("onResponseFailure: " +
                                                                                 request.getURI() +
                                                                                 ":" +
                                                                                 throwable.getMessage(), throwable))
+                    .onResponseHeaders(response ->
+                    {
+                        resource.setLastModified(response.getHeaders().getDateField("Last-Modified"));
+                        if (timestamp == 0 || timestamp < resource.getLastModified())
+                        {
+                            retValue.set(true);
+                        }
+                        resource.setContentLength(response.getHeaders().getLongField("Content-Length"));
+                        if (destinationStream != null && resource.getContentLength() > 0 && retValue.get())
+                        {
+                            fireGetStarted(resource, destination);
+                        }
+                    })
+                    .onResponseContent((response, buffer) ->
+                    {
+                        //int size = buffer.limit() - buffer.position();
+                        byte[] bytes = BufferUtil.toArray(buffer);
+                        try
+                        {
+                            if (destinationStream != null && retValue.get())
+                            {
+                                destinationStream.write(bytes);
+                                TransferEvent transferEvent = new TransferEvent(this,
+                                                                                resource,
+                                                                                TransferEvent.TRANSFER_PROGRESS,
+                                                                                TransferEvent.REQUEST_GET);
+                                fireTransferProgress(transferEvent, bytes, bytes.length);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw new RuntimeException(e.getMessage(),e);
+                        }
+                    })
+                    .onResponseSuccess(response ->
+                    {
+                        if (destinationStream != null && retValue.get())
+                        {
+                            fireGetCompleted(resource, destination);
+                        }
+                    })
                     .send();
 
 
@@ -342,34 +388,36 @@ public class JettyClientMavenWagon
                 }
             }
 
-            boolean retValue = false;
 
-            long lastModified = contentResponse.getHeaders().getDateField("Last-Modified");
-
-            resource.setLastModified(lastModified);
-            resource.setContentLength(contentResponse.getHeaders().getLongField("Content-Length"));
-
-            if (timestamp == 0 || timestamp < resource.getLastModified())
+//            resource.setLastModified(lastModified);
+//            resource.setContentLength(contentResponse.getHeaders().getLongField("Content-Length"));
+//
+//            if (timestamp == 0 || timestamp < resource.getLastModified())
+//            {
+//                retValue = true;
+//                InputStream input = getResponseContentSource(contentResponse);
+//                if (stream != null)
+//                {
+//                    fireGetStarted(resource, destination);
+//                    getTransfer(resource, stream, input);
+//                    fireGetCompleted(resource, destination);
+//                }
+//                else if (destination != null)
+//                {
+//                    getTransfer(resource, destination, input);
+//                }
+//                else
+//                {
+//                    // discard the response
+//                }
+//            }
+            // the file may have been writen whereas we do not need it timestamp check etc...
+            // so delete it
+            if (!retValue.get() && destination != null && Files.exists(destination.toPath()))
             {
-                retValue = true;
-                InputStream input = getResponseContentSource(contentResponse);
-                if (stream != null)
-                {
-                    fireGetStarted(resource, destination);
-                    getTransfer(resource, stream, input);
-                    fireGetCompleted(resource, destination);
-                }
-                else if (destination != null)
-                {
-                    getTransfer(resource, destination, input);
-                }
-                else
-                {
-                    // discard the response
-                }
+                Files.deleteIfExists(destination.toPath());
             }
-
-            return retValue;
+            return retValue.get();
         }
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
