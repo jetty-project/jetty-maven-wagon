@@ -16,55 +16,16 @@
 //  ========================================================================
 //
 
-package org.eclipse.jetty.maven.wagon;
+package org.apache.maven.wagon.observers;
 
-import java.io.IOException;
-import java.io.InputStream;
+import org.apache.maven.wagon.events.TransferEvent;
 
-class HugeInputStream
-    extends InputStream
+public class QuietDebug
+    extends Debug
 {
-
-    private long size;
-
-    private long read;
-
-    public HugeInputStream(long size)
-    {
-        this.size = size;
-    }
-
-    public long getSize()
-    {
-        return size;
-    }
-
     @Override
-    public int read()
-        throws IOException
+    public void transferProgress( TransferEvent transferEvent, byte[] buffer, int length )
     {
-        if (read >= size)
-        {
-            return -1;
-        }
-        read++;
-        return 0;
+        transfer += length;
     }
-
-    @Override
-    public int read(byte[] b, int off, int len)
-        throws IOException
-    {
-        if (read >= size)
-        {
-            return -1;
-        }
-
-        int avail = (int) Math.min(len, size - read);
-
-        read += avail;
-
-        return avail;
-    }
-
 }

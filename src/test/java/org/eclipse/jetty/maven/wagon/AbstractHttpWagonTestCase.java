@@ -1,6 +1,6 @@
 //
 //  ========================================================================
-//  Copyright (c) 1995-2019 Mort Bay Consulting Pty. Ltd.
+//  Copyright (c) 1995-2020 Mort Bay Consulting Pty. Ltd.
 //  ------------------------------------------------------------------------
 //  All rights reserved. This program and the accompanying materials
 //  are made available under the terms of the Eclipse Public License v1.0
@@ -25,8 +25,10 @@ import org.apache.maven.wagon.TransferFailedException;
 import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.authorization.AuthorizationException;
+import org.apache.maven.wagon.events.TransferEvent;
 import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.apache.maven.wagon.observers.Debug;
+import org.apache.maven.wagon.observers.QuietDebug;
 import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.apache.maven.wagon.repository.Repository;
 import org.apache.maven.wagon.resource.Resource;
@@ -88,7 +90,7 @@ public abstract class AbstractHttpWagonTestCase
     protected List<Connector> connectors = new ArrayList<>();
     protected List<Handler> _handlers = new ArrayList<>();
 
-    Debug debug = new Debug();
+    Debug debug = new QuietDebug();
 
     @Override
     protected void setUp()
@@ -110,7 +112,7 @@ public abstract class AbstractHttpWagonTestCase
         wagon.addTransferListener(debug);
         // we only want to setup trustAll for our home made test certificate
         // and this cannot be a default option
-        wagon.setSslInsecure( true);
+        wagon.setSslInsecure(true);
         wagon.getHttpClient().stop();
         return wagon;
     }
@@ -237,10 +239,8 @@ public abstract class AbstractHttpWagonTestCase
         throws Exception
     {
         resource = "test-resource";
-
         testRepository = new Repository("test", getTestRepositoryUrl());
         testRepository.setPermissions(getPermissions());
-
         localRepositoryPath = getRepositoryPath();
         localRepository = createFileRepository("file://" + localRepositoryPath);
         message("Local repository: " + localRepository);
@@ -302,17 +302,13 @@ public abstract class AbstractHttpWagonTestCase
         _handlers = Arrays.asList(handler);
 
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         wagon.getToStream("resource", new ByteArrayOutputStream());
-
         wagon.disconnect();
 
         tearDownWagonTestingFixtures();
-
         stopTestServer();
         if (getWagonRoleHint().startsWith( "h2" ))
         {
@@ -380,7 +376,6 @@ public abstract class AbstractHttpWagonTestCase
         _handlers = Arrays.asList(handler);
 
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
@@ -442,8 +437,6 @@ public abstract class AbstractHttpWagonTestCase
     private boolean runTestResourceExists(int status)
         throws Exception
     {
-        
-
         StreamingWagon wagon = (StreamingWagon) getWagon();
 
         StatusHandler handler = new StatusHandler();
@@ -451,11 +444,9 @@ public abstract class AbstractHttpWagonTestCase
         _handlers = Arrays.asList(handler);
 
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         try
         {
             return wagon.resourceExists("resource");
@@ -463,9 +454,7 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -484,22 +473,15 @@ public abstract class AbstractHttpWagonTestCase
         
 
         long bytes = (long) (Runtime.getRuntime().maxMemory() * 1.1);
-
         _handlers = Arrays.asList(new HugeDataHandler(bytes));
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
 
         File hugeFile = File.createTempFile("wagon-test-" + getName(), ".tmp");
         hugeFile.deleteOnExit();
-        // avoid too much noise for this test
-        wagon.removeSessionListener(debug);
-        wagon.removeTransferListener(debug);
         try
         {
             wagon.get("huge.txt", hugeFile);
@@ -509,11 +491,7 @@ public abstract class AbstractHttpWagonTestCase
             wagon.disconnect();
             tearDownWagonTestingFixtures();
             stopTestServer();
-            wagon.addSessionListener(debug);
-            wagon.addTransferListener(debug);
-
         }
-
         assertTrue(hugeFile.isFile());
         assertEquals(bytes, hugeFile.length());
     }
@@ -525,7 +503,6 @@ public abstract class AbstractHttpWagonTestCase
         {
             ProxyInfo proxyInfo = createProxyInfo();
             TestHeaderHandler handler = new TestHeaderHandler();
-
             runTestProxiedRequest(proxyInfo, handler);
         }
     }
@@ -539,9 +516,7 @@ public abstract class AbstractHttpWagonTestCase
             proxyInfo.setUserName("user");
             proxyInfo.setPassword("secret");
             TestHeaderHandler handler = new AuthorizingProxyHandler();
-
             runTestProxiedRequest(proxyInfo, handler);
-
             assertEquals("Basic dXNlcjpzZWNyZXQ=", handler.headers.get("Proxy-Authorization"));
         }
     }
@@ -549,14 +524,9 @@ public abstract class AbstractHttpWagonTestCase
     private void runTestProxiedRequest(ProxyInfo proxyInfo, TestHeaderHandler handler)
         throws Exception
     {
-        
-
         _handlers = Arrays.asList(handler);
-
         setupWagonTestingFixtures();
-
         setupRepositories();
-
         proxyInfo.setPort(getLocalPort());
 
         File srcFile = new File(getRepositoryPath() + "/proxy");
@@ -580,15 +550,12 @@ public abstract class AbstractHttpWagonTestCase
         try
         {
             wagon.get("proxy/" + resName, destFile);
-
             assertTrue(handler.headers.containsKey("Proxy-Connection"));
         }
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -645,11 +612,8 @@ public abstract class AbstractHttpWagonTestCase
     public void runTestSecuredGet(AuthenticationInfo authInfo)
         throws Exception
     {
-
         _handlers = Arrays.asList(createSecuredContext());
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         File srcFile = new File(getRepositoryPath() + "/secured");
@@ -666,15 +630,12 @@ public abstract class AbstractHttpWagonTestCase
         try (ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream("secured/" + resName, out);
-
             assertEquals("top secret", out.toString());
         }
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -733,12 +694,10 @@ public abstract class AbstractHttpWagonTestCase
     public void runTestSecuredResourceExists(AuthenticationInfo authInfo)
         throws Exception
     {
-
         Handler context = createSecuredContext();
         _handlers = Arrays.asList(context);
 
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         File srcFile = new File(getRepositoryPath() + "/secured");
@@ -749,21 +708,16 @@ public abstract class AbstractHttpWagonTestCase
         Files.write(Paths.get(srcFile.getAbsolutePath(), resName), "top secret".getBytes());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()), authInfo);
-
         try
         {
             assertTrue(wagon.resourceExists("secured/" + resName));
-
             assertFalse(wagon.resourceExists("secured/missing-" + resName));
         }
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -826,9 +780,7 @@ public abstract class AbstractHttpWagonTestCase
         Files.write(Paths.get(srcFile.getAbsolutePath()), "test put".getBytes());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         try
         {
             wagon.put(srcFile, resName);
@@ -837,11 +789,8 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
-
             srcFile.delete();
         }
     }
@@ -903,23 +852,18 @@ public abstract class AbstractHttpWagonTestCase
 
         File dstFile = new File(getRepositoryPath() + "/secured", resName);
         dstFile.mkdirs();
-        dstFile.delete();
+        Files.deleteIfExists(dstFile.toPath());
         assertFalse(dstFile.exists());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         ChecksumObserver checksumObserver = new ChecksumObserver("SHA-1");
         wagon.addTransferListener(checksumObserver);
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()), authInfo);
-
         try
         {
             wagon.put(srcFile, "secured/" + resName);
-
             assertEquals("put top secret",
                           Files.readAllLines(Paths.get(dstFile.getAbsolutePath()), Charset.forName("UTF-8")).get(0));
-
             assertEquals("8b4f978eeec389ebed2c8b0acd8e107efff29be5", checksumObserver.getActualChecksum());
         }
         finally
@@ -935,9 +879,7 @@ public abstract class AbstractHttpWagonTestCase
     {
         PutHandler handler = new PutHandler(getRepositoryPath());
         _handlers = Arrays.asList(handler);
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         String resName = "put-res.txt";
@@ -950,23 +892,17 @@ public abstract class AbstractHttpWagonTestCase
         assertFalse(dstFile.exists());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         try
         {
             wagon.put(srcFile, "put/" + resName);
-
             assertEquals("test put", Files.readAllLines(Paths.get(dstFile.getAbsolutePath())).get(0));
         }
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
-
             Files.deleteIfExists(srcFile.toPath());
         }
     }
@@ -976,17 +912,11 @@ public abstract class AbstractHttpWagonTestCase
     {
 
         long bytes = (long) (Runtime.getRuntime().maxMemory() * 1.1);
-
         _handlers = Arrays.asList(new PutHandler(getRepositoryPath()));
-
         setupWagonTestingFixtures();
-
         setupRepositories();
-
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         File hugeFile = File.createTempFile("wagon-test-" + getName(), ".tmp");
         hugeFile.deleteOnExit();
         try(OutputStream fos = Files.newOutputStream(hugeFile.toPath()))
@@ -994,7 +924,6 @@ public abstract class AbstractHttpWagonTestCase
             IOUtil.copy(new HugeInputStream(bytes), fos);
         }
         assertEquals(bytes, hugeFile.length());
-
         try
         {
             wagon.put(hugeFile, "huge.txt");
@@ -1002,9 +931,7 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
 
@@ -1028,17 +955,12 @@ public abstract class AbstractHttpWagonTestCase
     private void runTestGetUnknown(String url)
         throws Exception
     {
-        
-
         StreamingWagon wagon = (StreamingWagon) getWagon();
         wagon.setTimeout(5000);
         try
-
         {
             wagon.connect(new Repository("id", url));
-
             wagon.getToStream("resource", new ByteArrayOutputStream());
-
             fail();
         }
         catch (TransferFailedException ex)
@@ -1062,27 +984,21 @@ public abstract class AbstractHttpWagonTestCase
     private void runTestPutUnknown(String url)
         throws Exception
     {
-        
-
         String resName = "put-res.txt";
         File srcFile = new File(getOutputPath(), resName);
         Files.write(Paths.get(srcFile.getAbsolutePath()), "test put".getBytes());
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
         wagon.setTimeout(5000);
-
         try
         {
             wagon.connect(new Repository("id", url));
-
             wagon.put(srcFile, resName);
-
             fail();
         }
         catch (TransferFailedException ex)
         {
             assertTrue(true);
-
             srcFile.delete();
         }
     }
@@ -1090,21 +1006,14 @@ public abstract class AbstractHttpWagonTestCase
     public void testHighLatencyGet()
         throws Exception
     {
-        
-
         Handler handler = new LatencyHandler(300, 10);
         _handlers = Arrays.asList(handler);
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
-        wagon.setTimeout(10000);
-
+        wagon.setReadTimeout(12000);
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         try(ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream())
         {
             wagon.getToStream("large.txt", byteArrayOutputStream);
@@ -1113,9 +1022,7 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -1123,25 +1030,17 @@ public abstract class AbstractHttpWagonTestCase
     public void testInfiniteLatencyGet()
         throws Exception
     {
-        
-
         Handler handler = new LatencyHandler(-1, 100);
         _handlers = Arrays.asList(handler);
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.setTimeout(2000);
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         try(ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream("large.txt", out);
-
             fail("Should have failed to transfer due to transaction timeout.");
         }
         catch (TransferFailedException e)
@@ -1151,9 +1050,7 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -1192,31 +1089,22 @@ public abstract class AbstractHttpWagonTestCase
                                          boolean relativeLocation)
         throws Exception
     {
-        
-
         Handler handler = new RedirectHandler(code, currUrl, origUrl, maxRedirects, relativeLocation);
         _handlers = Arrays.asList(handler);
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         try (ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream(currUrl, out);
-
             assertEquals(out.toString().length(), 1024);
         }
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -1238,15 +1126,11 @@ public abstract class AbstractHttpWagonTestCase
     {
         Handler handler = new RedirectHandler(code, currUrl, origUrl, maxRedirects, false);
         _handlers = Arrays.asList(handler);
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         try (ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
             wagon.getToStream(currUrl, out);
@@ -1259,9 +1143,7 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -1269,19 +1151,13 @@ public abstract class AbstractHttpWagonTestCase
     public void testGracefulFailureUnderMultithreadedMisuse()
         throws Exception
     {
-        
-
         Handler handler = new LatencyHandler(500, 2);
         _handlers = Arrays.asList(handler);
-
         setupWagonTestingFixtures();
-
         setupRepositories();
 
         StreamingWagon wagon = (StreamingWagon) getWagon();
-
         wagon.connect(new Repository("id", getTestRepositoryUrl()));
-
         new Thread(() ->
             {
                 try
@@ -1295,7 +1171,7 @@ public abstract class AbstractHttpWagonTestCase
                     e.printStackTrace();
                 }
             }
-            , "wagon-killer").start();
+            , "wagon-disconnect").start();
 
         try
         {
@@ -1308,9 +1184,7 @@ public abstract class AbstractHttpWagonTestCase
         finally
         {
             wagon.disconnect();
-
             tearDownWagonTestingFixtures();
-
             stopTestServer();
         }
     }
@@ -1526,16 +1400,8 @@ public abstract class AbstractHttpWagonTestCase
     private static class RedirectHandler
         extends AbstractHandler
     {
-        private String origUrl;
-
-        private int code;
-
-        private int maxRedirects;
-
-        private int redirectCount = 0;
-
-        private String currUrl;
-
+        private String origUrl, currUrl;
+        private int code, maxRedirects, redirectCount = 0;
         private boolean relativeLocation;
 
         public RedirectHandler(int code, String currUrl, String origUrl, int maxRedirects,

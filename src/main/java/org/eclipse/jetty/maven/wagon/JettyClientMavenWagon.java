@@ -1,6 +1,6 @@
 //
 //  ========================================================================
-//  Copyright (c) 1995-2019 Mort Bay Consulting Pty. Ltd.
+//  Copyright (c) 1995-2020 Mort Bay Consulting Pty. Ltd.
 //  ------------------------------------------------------------------------
 //  All rights reserved. This program and the accompanying materials
 //  are made available under the terms of the Eclipse Public License v1.0
@@ -38,6 +38,7 @@ import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
+import org.eclipse.jetty.client.api.Result;
 import org.eclipse.jetty.client.http.HttpClientTransportOverHTTP;
 import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.client.util.FutureResponseListener;
@@ -264,9 +265,7 @@ public class JettyClientMavenWagon
         throws TransferFailedException, ResourceDoesNotExistException, AuthorizationException
     {
         Resource resource = new Resource(resourceName);
-
         fireGetInitiated(resource, destination);
-
         return getIfNewer(resource, null, destination, timestamp);
     }
 
@@ -280,9 +279,7 @@ public class JettyClientMavenWagon
         throws ResourceDoesNotExistException, TransferFailedException, AuthorizationException
     {
         Resource resource = new Resource(resourceName);
-
         fireGetInitiated(resource, null);
-
         return getIfNewer(resource, stream, null, timestamp);
     }
 
@@ -290,15 +287,8 @@ public class JettyClientMavenWagon
         throws ResourceDoesNotExistException, TransferFailedException, AuthorizationException
     {
         String resourceUrl = buildUrl(resource.getName());
-
         Request request = newRequest(resourceUrl).method(HttpMethod.GET);
-
-        request.header("Accept-Encoding", "gzip");
-        if (!useCache)
-        {
-            request.header("Pragma", "no-cache") //
-                .header("Cache-Control", "no-cache, no-store");
-        }
+        request.header(HttpHeader.ACCEPT_ENCODING, "gzip");
 
         AtomicBoolean retValue = new AtomicBoolean(Boolean.FALSE);
         AtomicInteger responseStatus = new AtomicInteger(HttpStatus.OK_200);
@@ -306,7 +296,6 @@ public class JettyClientMavenWagon
         try (OutputStream destinationStream = stream != null ? stream
             : destination != null ? Files.newOutputStream(destination.toPath()) : null)
         {
-
             FutureResponseListener listener = new FutureResponseListener(request)
             {
                 @Override
@@ -336,7 +325,6 @@ public class JettyClientMavenWagon
                 @Override
                 public void onContent(Response response, ByteBuffer buffer)
                 {
-                    //int size = buffer.limit() - buffer.position();
                     byte[] bytes = BufferUtil.toArray(buffer);
                     try
                     {
@@ -357,6 +345,13 @@ public class JettyClientMavenWagon
                 }
 
                 @Override
+                public void onComplete(Result result)
+                {
+                    super.onComplete(result);
+                    LOGGER.debug("onComplete, isDone? {}", isDone());
+                }
+
+                @Override
                 public void onSuccess(Response response)
                 {
                     if (destinationStream != null && retValue.get())
@@ -368,27 +363,23 @@ public class JettyClientMavenWagon
             };
             request.send(listener);
             listener.get(getReadTimeout(), TimeUnit.MILLISECONDS);
+
             switch (responseStatus.get())
             {
                 case HttpStatus.OK_200:
                 case HttpStatus.NOT_MODIFIED_304:
                     break;
-
                 case HttpStatus.FORBIDDEN_403:
                     fireSessionConnectionRefused();
                     throw new AuthorizationException("Transfer failed: [" + responseStatus + "] " + resourceUrl);
-
                 case HttpStatus.UNAUTHORIZED_401:
                     fireSessionConnectionRefused();
                     throw new AuthorizationException("Transfer failed: Not authorized");
-
                 case HttpStatus.PROXY_AUTHENTICATION_REQUIRED_407:
                     fireSessionConnectionRefused();
                     throw new AuthorizationException("Transfer failed: Not authorized by proxy");
-
                 case HttpStatus.NOT_FOUND_404:
                     throw new ResourceDoesNotExistException("Transfer failed: " + resourceUrl + " does not exist");
-
                 default:
                 {
                     cleanupGetTransfer(resource);
@@ -410,21 +401,17 @@ public class JettyClientMavenWagon
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
             LOGGER.error("error connecting to " + request.getURI(), e);
-
             fireTransferError(resource, e, TransferEvent.REQUEST_GET);
-
             throw new TransferFailedException("Transfer interrupted: " + e.getMessage(), e);
         }
         catch (FileNotFoundException e)
         {
             fireGetCompleted(resource, null);
-
             throw new ResourceDoesNotExistException("Transfer error: Resource not found in repository", e);
         }
         catch (IOException | IllegalStateException e)
         {
             fireTransferError(resource, e, TransferEvent.REQUEST_GET);
-
             throw new TransferFailedException("Transfer error: " + e.getMessage(), e);
         }
     }
@@ -433,13 +420,9 @@ public class JettyClientMavenWagon
         throws TransferFailedException, ResourceDoesNotExistException, AuthorizationException
     {
         Resource resource = new Resource(resourceName);
-
         firePutInitiated(resource, source);
-
         resource.setContentLength(source.length());
-
         resource.setLastModified(source.lastModified());
-
         put(null, source, resource);
     }
 
@@ -447,9 +430,7 @@ public class JettyClientMavenWagon
         throws TransferFailedException, ResourceDoesNotExistException, AuthorizationException
     {
         Resource resource = new Resource(destination);
-
         firePutInitiated(resource, null);
-
         put(stream, null, resource);
     }
 
@@ -457,13 +438,9 @@ public class JettyClientMavenWagon
         throws TransferFailedException, ResourceDoesNotExistException, AuthorizationException
     {
         Resource resource = new Resource(destination);
-
         firePutInitiated(resource, null);
-
         resource.setContentLength(contentLength);
-
         resource.setLastModified(lastModified);
-
         put(stream, null, resource);
     }
 
@@ -472,14 +449,8 @@ public class JettyClientMavenWagon
     {
         String resourceUrl = buildUrl(resource.getName());
         Request request = newRequest(resourceUrl).method(HttpMethod.PUT);
-        if (!useCache)
-        {
-            request.header("Pragma", "no-cache")
-                .header("Cache-Control", "no-cache, no-store");
-        }
 
         firePutStarted(resource, source);
-
         try
         {
             setRequestContentSource(request, stream, source);
@@ -517,22 +488,17 @@ public class JettyClientMavenWagon
                 case HttpStatus.ACCEPTED_202: // 202
                 case HttpStatus.NO_CONTENT_204: // 204
                     break;
-
                 case HttpStatus.FORBIDDEN_403:
                     fireSessionConnectionRefused();
                     throw new AuthorizationException("Transfer failed: [" + responseStatus + "] " + resourceUrl);
-
                 case HttpStatus.UNAUTHORIZED_401:
                     fireSessionConnectionRefused();
                     throw new AuthorizationException("Transfer failed: Not authorized");
-
                 case HttpStatus.PROXY_AUTHENTICATION_REQUIRED_407:
                     fireSessionConnectionRefused();
                     throw new AuthorizationException("Transfer failed: Not authorized by proxy");
-
                 case HttpStatus.NOT_FOUND_404:
                     throw new ResourceDoesNotExistException("Transfer failed: " + resourceUrl + " does not exist");
-
                 default:
                 {
                     LOGGER.warn("Transfer failed: [{}] {}", responseStatus, resourceUrl);
@@ -547,13 +513,11 @@ public class JettyClientMavenWagon
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
             fireTransferError(resource, e, TransferEvent.REQUEST_PUT);
-
             throw new TransferFailedException("Transfer interrupted: " + e.getMessage(), e);
         }
         catch (IOException | IllegalStateException e)
         {
             fireTransferError(resource, e, TransferEvent.REQUEST_PUT);
-
             throw new TransferFailedException("Transfer error: " + e.getMessage(), e);
         }
     }
@@ -563,7 +527,6 @@ public class JettyClientMavenWagon
         throws TransferFailedException, AuthorizationException
     {
         Resource resource = new Resource(resourceName);
-
         try
         {
             return getIfNewer(resource, null, null, 0);
@@ -594,23 +557,6 @@ public class JettyClientMavenWagon
             source = new FileInputStream(srcFile);
         }
         request.content(new InputStreamContentProvider(source));
-    }
-
-    protected InputStream getResponseContentSource(ContentResponse contentResponse)
-        throws IOException
-    {
-        byte[] source = contentResponse.getContent();
-
-        if (source != null)
-        {
-            String contentEncoding = contentResponse.getHeaders().get("Content-Encoding");
-            if ("gzip".equalsIgnoreCase(contentEncoding))
-            {
-                return new GZIPInputStream(new ByteArrayInputStream(source));
-            }
-            return new ByteArrayInputStream(source);
-        }
-        return null;
     }
 
     public void setHttpHeaders(Properties properties)
@@ -649,6 +595,12 @@ public class JettyClientMavenWagon
                 proxyInfo.getPassword()).getBytes(StandardCharsets.ISO_8859_1);
             String value = "Basic " + Base64.getEncoder().encodeToString(authBytes);
             request.header(HttpHeader.PROXY_AUTHORIZATION, value);
+        }
+
+        if (!useCache)
+        {
+            request.header(HttpHeader.PRAGMA, "no-cache") //
+                .header(HttpHeader.CACHE_CONTROL, "no-cache, no-store");
         }
         return request.idleTimeout(getTimeout(), TimeUnit.MILLISECONDS)
                         .timeout(getReadTimeout(), TimeUnit.MILLISECONDS);
