@@ -74,6 +74,7 @@ public class JettyClientHttp2WagonTest
         throws Exception
     {
         Wagon wagon = getWagon();
+        logger.info("Wagon: {}", wagon);
         Repository repository = new Repository("central","https://repo.maven.apache.org/maven2/");
         wagon.connect( repository );
         Path tmp = Files.createTempFile( "test", "jetty-client");
