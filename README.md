@@ -5,6 +5,8 @@
 This [Apache Maven Wagon](http://maven.apache.org/wagon) implementation is based on the [Jetty Client](https://www.eclipse.org/jetty/documentation/current/http-client.html).
 It supports HTTP/1 protocols such http, https and HTTP/2 as well such H2 or H2C (using ALPN or not)  
 
+**Need Java 11**
+
 ## Configuration
 
 The Jetty Wagon implementation must be activated first by being added in the build/extensions section of the pom 
