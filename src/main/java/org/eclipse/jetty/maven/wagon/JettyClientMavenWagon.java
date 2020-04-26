@@ -240,7 +240,7 @@ public class JettyClientMavenWagon
         String resourceUri = resourceName.replace(' ', '+');
 
         String[] parts = StringUtils.split(resourceUri, "/");
-        for(String part:parts)
+        for (String part:parts)
         {
             // encode URI
             urlBuilder.append('/').append(URLEncoder.encode(part));
@@ -368,64 +368,6 @@ public class JettyClientMavenWagon
             };
             request.send(listener);
             listener.get(getReadTimeout(), TimeUnit.MILLISECONDS);
-
-
-
-
-//            ContentResponse contentResponse = request
-//                    .onRequestFailure((request1, throwable) -> LOGGER.debug("onRequestFailure: " +
-//                                                                               request.getURI() +
-//                                                                               ":" +
-//                                                                               throwable.getMessage(), throwable))
-//                    .onResponseFailure((response, throwable) -> LOGGER.debug("onResponseFailure: " +
-//                                                                                request.getURI() +
-//                                                                                ":" +
-//                                                                                throwable.getMessage(), throwable))
-//                    .onResponseHeaders(response ->
-//                    {
-//                        resource.setLastModified(response.getHeaders().getDateField("Last-Modified"));
-//                        if (timestamp == 0 || timestamp < resource.getLastModified())
-//                        {
-//                            retValue.set(true);
-//                        }
-//                        resource.setContentLength(response.getHeaders().getLongField("Content-Length"));
-//                        if (destinationStream != null && resource.getContentLength() > 0 && retValue.get())
-//                        {
-//                            fireGetStarted(resource, destination);
-//                        }
-//                    })
-//                    .onResponseContent((response, buffer) ->
-//                    {
-//                        //int size = buffer.limit() - buffer.position();
-//                        byte[] bytes = BufferUtil.toArray(buffer);
-//                        try
-//                        {
-//                            if (destinationStream != null && retValue.get())
-//                            {
-//                                destinationStream.write(bytes);
-//                                TransferEvent transferEvent = new TransferEvent(this,
-//                                                                                resource,
-//                                                                                TransferEvent.TRANSFER_PROGRESS,
-//                                                                                TransferEvent.REQUEST_GET);
-//                                fireTransferProgress(transferEvent, bytes, bytes.length);
-//                            }
-//                        }
-//                        catch (Exception e)
-//                        {
-//                            throw new RuntimeException(e.getMessage(),e);
-//                        }
-//                    })
-//                    .onResponseSuccess(response ->
-//                    {
-//                        if (destinationStream != null && retValue.get())
-//                        {
-//                            fireGetCompleted(resource, destination);
-//                        }
-//                    })
-//                    .send();
-
-
-            //int responseStatus = contentResponse.getStatus();
             switch (responseStatus.get())
             {
                 case HttpStatus.OK_200:
@@ -457,30 +399,7 @@ public class JettyClientMavenWagon
                 }
             }
 
-
-//            resource.setLastModified(lastModified);
-//            resource.setContentLength(contentResponse.getHeaders().getLongField("Content-Length"));
-//
-//            if (timestamp == 0 || timestamp < resource.getLastModified())
-//            {
-//                retValue = true;
-//                InputStream input = getResponseContentSource(contentResponse);
-//                if (stream != null)
-//                {
-//                    fireGetStarted(resource, destination);
-//                    getTransfer(resource, stream, input);
-//                    fireGetCompleted(resource, destination);
-//                }
-//                else if (destination != null)
-//                {
-//                    getTransfer(resource, destination, input);
-//                }
-//                else
-//                {
-//                    // discard the response
-//                }
-//            }
-            // the file may have been writen whereas we do not need it timestamp check etc...
+            // the file may have been written whereas we do not need it timestamp check etc...
             // so delete it
             if (!retValue.get() && destination != null && Files.exists(destination.toPath()))
             {
@@ -568,7 +487,7 @@ public class JettyClientMavenWagon
             ContentResponse contentResponse = request
                 .onComplete(result -> 
                 {
-                    LOGGER.debug( "PUT#onComplete");
+                    LOGGER.debug("PUT#onComplete");
                     firePutCompleted(resource, source);
                 })
                 .onRequestContent((request1, buffer) -> 
