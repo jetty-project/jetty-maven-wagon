@@ -81,6 +81,7 @@ public class JettyClientHttp2WagonTest
         wagon.get( "org/eclipse/jetty/jetty-client/9.4.28.v20200408/jetty-client-9.4.28.v20200408.jar",
                    tmp.toFile() );
         assertTrue(tmp.toFile().exists());
+        logger.info( "file size:" + tmp.toFile().length() );
         Files.deleteIfExists(tmp);
     }
 
