@@ -60,12 +60,14 @@ public class JettyClientH2MavenWagon
         http2Client.setSelectors(selectors);
         HttpClientTransportOverHTTP2 httpClientTransportOverHTTP2 = new HttpClientTransportOverHTTP2(http2Client);
         httpClientTransportOverHTTP2.setUseALPN(useAlpn);
+        LOGGER.debug("sessionRecvWindow: {}, streamRecvWindow: {}, selectors: {}, useAlpn: {}",
+                     sessionRecvWindow, streamRecvWindow, selectors, useAlpn);
         return httpClientTransportOverHTTP2;
     }
 
     private static HttpClient createHttpClient()
     {
-        LOGGER.info("createHttpClient");
+        LOGGER.info("create H2 HttpClient");
         try
         {
             SslContextFactory sslContextFactory = new SslContextFactory.Client(SSL_INSECURE);

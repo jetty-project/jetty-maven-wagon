@@ -48,6 +48,7 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.util.BufferUtil;
+import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,8 +75,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.zip.GZIPInputStream;
+import java.util.function.LongConsumer;
 
 /**
  * JettyClientMavenWagon
@@ -126,6 +126,7 @@ public class JettyClientMavenWagon
 
     protected void restartClient()
     {
+        LOGGER.debug("restartClient");
         HTTP_CLIENT = createHttpClient();
     }
 
@@ -288,7 +289,7 @@ public class JettyClientMavenWagon
     {
         String resourceUrl = buildUrl(resource.getName());
         Request request = newRequest(resourceUrl).method(HttpMethod.GET);
-        request.header(HttpHeader.ACCEPT_ENCODING, "gzip");
+        //request.header(HttpHeader.ACCEPT_ENCODING, "gzip");
 
         AtomicBoolean retValue = new AtomicBoolean(Boolean.FALSE);
         AtomicInteger responseStatus = new AtomicInteger(HttpStatus.OK_200);
@@ -310,6 +311,7 @@ public class JettyClientMavenWagon
                 @Override
                 public void onHeaders(Response response)
                 {
+                    super.onHeaders( response );
                     resource.setLastModified(response.getHeaders().getDateField("Last-Modified"));
                     if (timestamp == 0 || timestamp < resource.getLastModified())
                     {
@@ -342,6 +344,21 @@ public class JettyClientMavenWagon
                     {
                         throw new RuntimeException(e.getMessage(),e);
                     }
+                }
+
+
+                @Override
+                public void onBegin( Response response )
+                {
+                    super.onBegin( response );
+                    LOGGER.debug("onBegin");
+                }
+
+                @Override
+                public void onBeforeContent( Response response, LongConsumer demand )
+                {
+                    super.onBeforeContent( response, demand );
+                    LOGGER.debug("onBeforeContent");
                 }
 
                 @Override
