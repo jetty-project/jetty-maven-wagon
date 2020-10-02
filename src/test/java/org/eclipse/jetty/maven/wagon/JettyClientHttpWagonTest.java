@@ -18,20 +18,19 @@
 
 package org.eclipse.jetty.maven.wagon;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Properties;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.maven.wagon.StreamingWagon;
 import org.apache.maven.wagon.repository.Repository;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Properties;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 public class JettyClientHttpWagonTest
     extends AbstractHttpWagonTestCase
@@ -127,34 +126,4 @@ public class JettyClientHttpWagonTest
             request.setHandled(true);
         }
     }
-
-//    public void testFailedGet()
-//        throws Exception
-//    {
-//        super.testFailedGet();
-//    }
-//
-//    public void testFailedGetIfNewer()
-//        throws Exception
-//    {
-//        super.testFailedGetIfNewer();
-//    }
-//
-//    public void testWagonGetIfNewerIsSame()
-//        throws Exception
-//    {
-//        super.testWagonGetIfNewerIsSame();
-//    }
-//
-//    public void testFailedGetIfNewerToStream()
-//        throws Exception
-//    {
-//        super.testFailedGetIfNewerToStream();
-//    }
-
-//    public void testWagonResourceNotExists()
-//        throws Exception
-//    {
-//        super.testWagonResourceNotExists();
-//    }
 }

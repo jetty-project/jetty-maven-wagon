@@ -42,11 +42,16 @@ public class JettyClientHttp2CWagonTest
 
     public void testGetRedirectFromHttpToHttps()
     {
-        // this test is no sense here
+        // this test makes no sense here
     }
 
     public void testProxiedRequest()
     {
-        // this test is no sense here
+        // this test makes no sense here
+    }
+
+    public void testProxiedRequestWithAuthentication()
+    {
+        // this test makes no sense here
     }
 }
