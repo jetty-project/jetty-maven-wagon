@@ -81,6 +81,11 @@ public class JettyClientH2MavenWagon
         }
     }
 
+    protected Logger getLogger()
+    {
+        return LOGGER;
+    }
+
     protected HttpClient getHttpClient()
     {
         return httpClient;

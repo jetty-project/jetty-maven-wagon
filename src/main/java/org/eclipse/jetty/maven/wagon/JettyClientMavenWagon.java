@@ -108,6 +108,11 @@ public class JettyClientMavenWagon
 
     private final Map<String, String> _httpHeaders = new HashMap<>();
 
+    protected Logger getLogger()
+    {
+        return LOGGER;
+    }
+
     private static HttpClient createHttpClient()
     {
         LOGGER.info("createHttpClient");
@@ -126,7 +131,7 @@ public class JettyClientMavenWagon
 
     protected void restartClient()
     {
-        LOGGER.debug("restartClient");
+        getLogger().debug("restartClient");
         HTTP_CLIENT = createHttpClient();
     }
 
@@ -144,7 +149,7 @@ public class JettyClientMavenWagon
     protected void closeConnection()
         throws ConnectionException
     {
-        LOGGER.debug("closeConnection");
+        getLogger().debug("closeConnection");
         try
         {
             getHttpClient().stop();
@@ -159,7 +164,7 @@ public class JettyClientMavenWagon
     protected void openConnectionInternal()
         throws ConnectionException, AuthenticationException
     {
-        LOGGER.debug("openConnection");
+        getLogger().debug("openConnection");
         getHttpClient().setFollowRedirects(this.isFollowRedirect());
         if (this.maxConnections > 0)
         {
@@ -302,7 +307,7 @@ public class JettyClientMavenWagon
                 @Override
                 public void onFailure(Response response, Throwable failure)
                 {
-                    LOGGER.debug("onResponseFailure: " +
+                    getLogger().debug("onResponseFailure: " +
                                      request.getURI() +
                                      ":" +
                                      failure.getMessage(), failure);
@@ -351,21 +356,21 @@ public class JettyClientMavenWagon
                 public void onBegin( Response response )
                 {
                     super.onBegin( response );
-                    LOGGER.debug("onBegin");
+                    getLogger().debug("onBegin");
                 }
 
                 @Override
                 public void onBeforeContent( Response response, LongConsumer demand )
                 {
                     super.onBeforeContent( response, demand );
-                    LOGGER.debug("onBeforeContent");
+                    getLogger().debug("onBeforeContent");
                 }
 
                 @Override
                 public void onComplete(Result result)
                 {
                     super.onComplete(result);
-                    LOGGER.debug("onComplete, isDone? {}", isDone());
+                    getLogger().debug("onComplete, isDone? {}", isDone());
                 }
 
                 @Override
@@ -417,7 +422,7 @@ public class JettyClientMavenWagon
         }
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
-            LOGGER.error("error connecting to " + request.getURI(), e);
+            getLogger().error("error connecting to " + request.getURI(), e);
             fireTransferError(resource, e, TransferEvent.REQUEST_GET);
             throw new TransferFailedException("Transfer interrupted: " + e.getMessage(), e);
         }
@@ -475,7 +480,7 @@ public class JettyClientMavenWagon
             ContentResponse contentResponse = request
                 .onComplete(result -> 
                 {
-                    LOGGER.debug("PUT#onComplete");
+                    getLogger().debug("PUT#onComplete");
                     firePutCompleted(resource, source);
                 })
                 .onRequestContent((request1, buffer) -> 
@@ -490,7 +495,7 @@ public class JettyClientMavenWagon
                 })
                 .onResponseFailure((response, throwable) -> 
                 {
-                    LOGGER.debug("PUT#onResponseFailure", throwable);
+                    getLogger().debug("PUT#onResponseFailure", throwable);
                     fireTransferError(resource, new Exception(throwable), TransferEvent.REQUEST_PUT);
                 })
                 .send();
