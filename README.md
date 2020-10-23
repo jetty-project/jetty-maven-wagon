@@ -1,5 +1,7 @@
 # **STILL WIP**
 
+To test it, you need to first build, install locally this project
+
 ## Getting Started
 
 This [Apache Maven Wagon](http://maven.apache.org/wagon) implementation is based on the [Jetty Client](https://www.eclipse.org/jetty/documentation/current/http-client.html).
