@@ -23,7 +23,7 @@
     <maven.compiler.target>11</maven.compiler.target>
     <jetty.version>9.4.35.v20201120</jetty.version>
     <wagon.version>3.4.3</wagon.version>
-    <slf4j.version>1.7.30</slf4j.version>
+    <slf4j.version>1.7.32</slf4j.version>
   </properties>
 
   <build>
